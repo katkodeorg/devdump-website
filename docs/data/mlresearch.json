@@ -1,0 +1,2591 @@
+[
+ {
+  "id": "diffusion-language-models",
+  "group": "Architectures",
+  "name": "Diffusion language models",
+  "examples": [
+   "LLaDA",
+   "Mercury (Inception Labs)"
+  ],
+  "summary": "Language models that generate text by starting from a fully masked sequence and iteratively unmasking tokens in parallel, instead of producing one token at a time left to right.",
+  "why": "Parallel decoding can give much higher throughput than autoregressive models at similar quality, and challenges the idea that LLM abilities require next-token prediction.",
+  "keyIdeas": [
+   "Training: mask a random fraction t (sampled uniformly in [0,1]) of tokens; a Transformer predicts the masked ones",
+   "Generation: begin fully masked, predict all masks each step, then remask low-confidence ones and repeat",
+   "LLaDA 8B, trained from scratch, is competitive with LLaMA3 8B on in-context learning",
+   "Mercury Coder reports roughly 1100 tokens/sec (Mini) on an H100 via parallel multi-token prediction"
+  ],
+  "links": [
+   {
+    "label": "LLaDA paper",
+    "url": "https://arxiv.org/abs/2502.09992"
+   },
+   {
+    "label": "Mercury tech report",
+    "url": "https://arxiv.org/abs/2506.17298"
+   },
+   {
+    "label": "LLaDA code",
+    "url": "https://github.com/ML-GSAI/LLaDA"
+   }
+  ],
+  "year": "2025"
+ },
+ {
+  "id": "hybrid-attention-ssm",
+  "group": "Architectures",
+  "name": "Hybrid attention + SSM",
+  "examples": [
+   "Jamba",
+   "Nemotron-H",
+   "Mamba-2-Attention (ablation in the Mamba-2 paper)"
+  ],
+  "summary": "Models that interleave a few full attention layers with many state space model (SSM) layers, which process sequences with a fixed-size recurrent state instead of a growing KV cache.",
+  "why": "SSM layers give linear-time processing and small memory, while a few attention layers recover precise in-context recall that pure SSMs struggle with.",
+  "keyIdeas": [
+   "Jamba interleaves Transformer and Mamba layers with MoE in some; supports 256K context and fits 140K on one 80GB GPU",
+   "Mamba-2 (SSD) shows SSMs and attention are closely related and makes the core layer 2 to 8x faster than Mamba",
+   "Mamba-2 ablations found about 10% attention layers works best, beating pure Transformer++ or pure Mamba-2"
+  ],
+  "links": [
+   {
+    "label": "Jamba paper",
+    "url": "https://arxiv.org/abs/2403.19887"
+   },
+   {
+    "label": "Mamba-2 (SSD) paper",
+    "url": "https://arxiv.org/abs/2405.21060"
+   },
+   {
+    "label": "Mamba code",
+    "url": "https://github.com/state-spaces/mamba"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "linear-attention-gated-deltanet",
+  "group": "Architectures",
+  "name": "Linear attention / Gated DeltaNet",
+  "examples": [
+   "DeltaNet",
+   "Gated DeltaNet"
+  ],
+  "summary": "Linear attention replaces softmax attention with a linear RNN whose state is a fixed-size matrix memory; Gated DeltaNet improves how that memory is updated and erased.",
+  "why": "Constant memory per token at inference instead of a KV cache that grows with context, while closing the recall gap that hurt earlier linear Transformers.",
+  "keyIdeas": [
+   "State is a matrix that maps keys to values; each token writes to it, so cost is linear in sequence length",
+   "Delta rule: overwrite the value stored for a key (targeted update) instead of only adding to memory",
+   "Gating: a data-dependent decay lets the model quickly erase stale memory",
+   "Hybrids with sliding window attention or Mamba2 layers further improve quality and training efficiency"
+  ],
+  "links": [
+   {
+    "label": "Gated DeltaNet paper",
+    "url": "https://arxiv.org/abs/2412.06464"
+   },
+   {
+    "label": "Parallel DeltaNet training",
+    "url": "https://arxiv.org/abs/2406.06484"
+   },
+   {
+    "label": "Gated DeltaNet code",
+    "url": "https://github.com/NVlabs/GatedDeltaNet"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "native-sparse-attention",
+  "group": "Architectures",
+  "name": "Native sparse attention",
+  "examples": [
+   "NSA",
+   "DeepSeek Sparse Attention (DSA)"
+  ],
+  "summary": "Attention where each query attends only to a selected subset of past tokens, with the selection learned during training rather than bolted on at inference time.",
+  "why": "Cuts the quadratic cost of attention on long contexts (training and decoding) while matching or exceeding full attention quality.",
+  "keyIdeas": [
+   "NSA runs three branches: compressed coarse blocks, selected fine-grained blocks, and a local sliding window",
+   "NSA kernels are designed for GPU arithmetic intensity, giving speedups at 64k tokens in forward, backward and decode",
+   "DSA (DeepSeek-V3.2) uses a cheap 'lightning indexer' to score past tokens, then attends only to the top-k"
+  ],
+  "links": [
+   {
+    "label": "NSA paper",
+    "url": "https://arxiv.org/abs/2502.11089"
+   },
+   {
+    "label": "DeepSeek-V3.2 paper (DSA)",
+    "url": "https://arxiv.org/abs/2512.02556"
+   },
+   {
+    "label": "DeepSeek-V3.2-Exp repo",
+    "url": "https://github.com/deepseek-ai/DeepSeek-V3.2-Exp"
+   }
+  ],
+  "year": "2025"
+ },
+ {
+  "id": "multi-head-latent-attention",
+  "group": "Architectures",
+  "name": "Multi-head latent attention (MLA)",
+  "examples": [
+   "DeepSeek-V2",
+   "DeepSeek-V3"
+  ],
+  "summary": "An attention variant that caches one small compressed latent vector per token and reconstructs each head's keys and values from it, instead of caching full per-head keys and values.",
+  "why": "The KV cache dominates memory in long-context serving; DeepSeek-V2 reports a 93.3% smaller KV cache and 5.76x higher max generation throughput.",
+  "keyIdeas": [
+   "Low-rank joint compression: project each hidden state down to a latent c_KV, up-project to keys and values",
+   "Only the latent is cached, so cache size no longer scales with number of heads times head dim",
+   "Decoupled RoPE: a small separate key part carries rotary position info, since RoPE breaks the compression trick"
+  ],
+  "links": [
+   {
+    "label": "DeepSeek-V2 paper",
+    "url": "https://arxiv.org/abs/2405.04434"
+   },
+   {
+    "label": "DeepSeek-V3 tech report",
+    "url": "https://arxiv.org/abs/2412.19437"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "byte-level-models",
+  "group": "Architectures",
+  "name": "Tokenizer-free / byte-level models",
+  "examples": [
+   "Byte Latent Transformer (BLT)"
+  ],
+  "summary": "Models that read raw bytes instead of tokens from a fixed vocabulary; BLT groups bytes into variable-length patches that the main Transformer processes.",
+  "why": "Removes the tokenizer and its fixed vocabulary, improving robustness and long-tail handling, and BLT matches token-based models at scale.",
+  "keyIdeas": [
+   "Patch boundaries are set by the entropy of the next byte: predictable text gets long patches, hard text short ones",
+   "Small local models encode bytes into patches and decode back; a large latent Transformer works on patches",
+   "FLOP-controlled scaling study up to 8B parameters and 4T training bytes",
+   "At fixed inference cost, patch size and model size can grow together"
+  ],
+  "links": [
+   {
+    "label": "BLT paper",
+    "url": "https://arxiv.org/abs/2412.09871"
+   },
+   {
+    "label": "BLT code",
+    "url": "https://github.com/facebookresearch/blt"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "test-time-training-memory",
+  "group": "Architectures",
+  "name": "Test-time training / learned memory",
+  "examples": [
+   "Titans",
+   "TTT layers"
+  ],
+  "summary": "Layers whose memory is itself a small neural network that is updated by gradient steps on the input while the model runs, so it keeps learning during inference.",
+  "why": "Offers a more expressive long-term memory than a fixed RNN state, scaling past 2M-token contexts without quadratic attention cost.",
+  "keyIdeas": [
+   "TTT: the hidden state is a model's weights, updated by a step of self-supervised learning on the input",
+   "Titans measures 'surprise' as the gradient of a memory loss; surprising inputs are memorized more strongly",
+   "A decay (forgetting) term manages limited memory, generalizing forget gates in modern recurrent models",
+   "Titans pairs attention (short-term memory) with the neural memory (long-term memory)"
+  ],
+  "links": [
+   {
+    "label": "Titans paper",
+    "url": "https://arxiv.org/abs/2501.00663"
+   },
+   {
+    "label": "TTT layers paper",
+    "url": "https://arxiv.org/abs/2407.04620"
+   }
+  ],
+  "year": "2025"
+ },
+ {
+  "id": "looped-recurrent-depth-transformers",
+  "group": "Architectures",
+  "name": "Looped / recurrent-depth transformers",
+  "examples": [
+   "Universal Transformers",
+   "Huginn-0125 recurrent-depth LM (Geiping et al.)"
+  ],
+  "summary": "Transformers that reuse the same block of layers repeatedly, so depth (and compute) can be increased at inference time by running more loop iterations.",
+  "why": "Scales test-time reasoning in latent space without generating extra chain-of-thought tokens or needing special training data.",
+  "keyIdeas": [
+   "Recurrent depth model: a prelude embeds input, a shared core block is looped, a coda decodes the output",
+   "The loop count can be set arbitrarily at test time; more iterations mean more compute per token",
+   "A 3.5B model trained on 800B tokens improves on reasoning up to compute equal to a 50B parameter model",
+   "Builds on Universal Transformers (2018), which applied one block recurrently over depth"
+  ],
+  "links": [
+   {
+    "label": "Recurrent depth paper",
+    "url": "https://arxiv.org/abs/2502.05171"
+   },
+   {
+    "label": "Universal Transformers",
+    "url": "https://arxiv.org/abs/1807.03819"
+   },
+   {
+    "label": "Recurrent depth code",
+    "url": "https://github.com/seal-rg/recurrent-pretraining"
+   }
+  ],
+  "year": "2025"
+ },
+ {
+  "id": "fine-grained-moe",
+  "group": "Architectures",
+  "name": "Fine-grained MoE, shared experts, aux-loss-free load balancing",
+  "examples": [
+   "DeepSeekMoE",
+   "DeepSeek-V3"
+  ],
+  "summary": "Mixture-of-Experts designs that split experts into many smaller ones, keep a few always-on shared experts, and balance expert load with a routing bias instead of an extra loss.",
+  "why": "Better expert specialization and balanced load at lower compute: DeepSeekMoE 16B matches LLaMA2 7B with about 40% of the computation.",
+  "keyIdeas": [
+   "Fine-grained: split N experts into mN smaller ones and activate mK, allowing more flexible expert combinations",
+   "Shared experts: a few experts process every token to hold common knowledge, reducing redundancy in routed ones",
+   "Aux-loss-free balancing: add a per-expert bias to routing scores, adjusted from recent load, before top-K",
+   "No auxiliary loss means no interfering gradients; DeepSeek-V3 uses this at 671B total, 37B active params"
+  ],
+  "links": [
+   {
+    "label": "DeepSeekMoE paper",
+    "url": "https://arxiv.org/abs/2401.06066"
+   },
+   {
+    "label": "Aux-loss-free balancing",
+    "url": "https://arxiv.org/abs/2408.15664"
+   },
+   {
+    "label": "DeepSeek-V3 tech report",
+    "url": "https://arxiv.org/abs/2412.19437"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "multi-token-prediction",
+  "group": "Architectures",
+  "name": "Multi-token prediction",
+  "examples": [
+   "Meta MTP (Gloeckle et al.)",
+   "DeepSeek-V3 MTP"
+  ],
+  "summary": "A training objective where the model predicts several future tokens at each position, not just the next one, using extra output heads or modules on a shared trunk.",
+  "why": "Improves sample efficiency and coding ability, and the extra heads can be used for speculative decoding to speed up inference.",
+  "keyIdeas": [
+   "Meta: n independent output heads predict the next n tokens; 13B model solves 12% more HumanEval problems",
+   "Models trained with 4-token prediction are up to 3x faster at inference, using the extra heads to draft tokens",
+   "DeepSeek-V3 predicts extra tokens sequentially with small modules, keeping the full causal chain at each depth"
+  ],
+  "links": [
+   {
+    "label": "Multi-token prediction paper",
+    "url": "https://arxiv.org/abs/2404.19737"
+   },
+   {
+    "label": "DeepSeek-V3 tech report",
+    "url": "https://arxiv.org/abs/2412.19437"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "muon-shampoo-soap",
+  "group": "Training & optimization",
+  "name": "Muon, Shampoo, SOAP optimizers",
+  "examples": [
+   "Muon",
+   "Shampoo",
+   "SOAP",
+   "Moonlight (Muon at 16B MoE scale)"
+  ],
+  "summary": "Optimizers that treat weight matrices as matrices rather than flat vectors of numbers. Shampoo and SOAP precondition gradients with per-layer matrix statistics; Muon orthogonalizes each 2D update.",
+  "why": "They can reach a target loss with less compute than AdamW; Moonshot reports Muon at about 2x AdamW's compute efficiency in its scaling experiments.",
+  "keyIdeas": [
+   "Muon: take the momentum update for a 2D weight and approximately orthogonalize it with a few Newton-Schulz matrix iterations",
+   "Muon is for hidden-layer matrices; embeddings, output head and scalar/vector params still use AdamW",
+   "Shampoo keeps left and right preconditioner matrices per layer instead of Adam's per-element scaling",
+   "SOAP runs Adam (Adafactor-like) in the eigenbasis of Shampoo's preconditioner: fewer hyperparameters, cheaper"
+  ],
+  "links": [
+   {
+    "label": "Muon (Keller Jordan blog)",
+    "url": "https://kellerjordan.github.io/posts/muon/"
+   },
+   {
+    "label": "Muon is Scalable for LLM Training",
+    "url": "https://arxiv.org/abs/2502.16982"
+   },
+   {
+    "label": "SOAP paper",
+    "url": "https://arxiv.org/abs/2409.11321"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "mup",
+  "group": "Training & optimization",
+  "name": "µP (maximal update parametrization)",
+  "examples": [
+   "µP",
+   "µTransfer",
+   "microsoft/mup"
+  ],
+  "summary": "A rule for scaling initialization and per-layer learning rates with model width so that optimal hyperparameters stay roughly constant as the model grows.",
+  "why": "You can tune hyperparameters on a small proxy model and transfer them zero-shot to a huge one, instead of sweeping at full scale.",
+  "keyIdeas": [
+   "Under standard parametrization the best learning rate drifts as width grows; under µP it stays roughly stable",
+   "µTransfer: parametrize the target in µP, tune a small model, copy the hyperparameters to the big one",
+   "Paper example: HPs from a 13M-param model beat published BERT-large results at the cost of one BERT-large pretraining"
+  ],
+  "links": [
+   {
+    "label": "Tensor Programs V (µTransfer)",
+    "url": "https://arxiv.org/abs/2203.03466"
+   },
+   {
+    "label": "microsoft/mup",
+    "url": "https://github.com/microsoft/mup"
+   }
+  ],
+  "year": "2022"
+ },
+ {
+  "id": "fp8-fp4-training",
+  "group": "Training & optimization",
+  "name": "FP8 / FP4 training (MXFP4, NVFP4)",
+  "examples": [
+   "FP8 (E4M3/E5M2)",
+   "DeepSeek-V3 FP8 training",
+   "MXFP4",
+   "NVFP4"
+  ],
+  "summary": "Doing the matrix multiplies of training in 8-bit or 4-bit floating point instead of BF16, using scale factors so tiny formats can still represent the needed range.",
+  "why": "Narrower numbers mean faster tensor-core math and less memory and bandwidth per step, which directly cuts the cost of training large models.",
+  "keyIdeas": [
+   "FP8 comes in E4M3 (more precision) and E5M2 (more range); DeepSeek-V3 used an FP8 mixed-precision framework at 671B scale",
+   "MX formats: each block of 32 values shares one 8-bit power-of-two scale (UE8M0)",
+   "NVFP4: 16-value blocks with an E4M3 scale plus a per-tensor FP32 scale, for a better fit than MXFP4",
+   "FP4 training needs tricks: random Hadamard transforms, stochastic rounding, some layers kept in higher precision"
+  ],
+  "links": [
+   {
+    "label": "FP8 Formats for Deep Learning",
+    "url": "https://arxiv.org/abs/2209.05433"
+   },
+   {
+    "label": "Microscaling (MX) Data Formats",
+    "url": "https://arxiv.org/abs/2310.10537"
+   },
+   {
+    "label": "Pretraining LLMs with NVFP4",
+    "url": "https://arxiv.org/abs/2509.25149"
+   }
+  ],
+  "year": "2025"
+ },
+ {
+  "id": "wsd-schedule",
+  "group": "Training & optimization",
+  "name": "WSD learning-rate schedules",
+  "examples": [
+   "Warmup-Stable-Decay (MiniCPM)",
+   "constant LR + cooldown"
+  ],
+  "summary": "A learning-rate schedule with three phases: short warmup, a long constant stable phase, then a short final decay (cooldown), replacing the usual cosine curve.",
+  "why": "Cosine requires fixing total training length up front; WSD lets you continue training or branch off cooldowns at any point, making scaling studies much cheaper.",
+  "keyIdeas": [
+   "Most of training runs at a constant high LR; the loss then drops sharply during a short decay (about 10% of steps)",
+   "One long stable run can be checkpointed and decayed at several lengths to get many models for scaling laws",
+   "Constant LR plus cooldown scales about as predictably as cosine (Hagele et al. 2024)"
+  ],
+  "links": [
+   {
+    "label": "MiniCPM (names and popularizes WSD)",
+    "url": "https://arxiv.org/abs/2404.06395"
+   },
+   {
+    "label": "Scaling Laws Beyond Fixed Training Durations",
+    "url": "https://arxiv.org/abs/2405.18392"
+   },
+   {
+    "label": "Understanding WSD (river valley view)",
+    "url": "https://arxiv.org/abs/2410.05192"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "data-mixing-doremi",
+  "group": "Training & optimization",
+  "name": "Data mixing & curation (DoReMi)",
+  "examples": [
+   "DoReMi",
+   "Phi-1 (textbook-quality data)"
+  ],
+  "summary": "Choosing what fraction of pretraining data comes from each domain (web, code, books, Wikipedia) and which documents to keep. DoReMi learns the mixture weights with a small proxy model.",
+  "why": "Data mix strongly affects model quality, and hand-tuning mixtures at full scale is too expensive to search.",
+  "keyIdeas": [
+   "DoReMi trains a small proxy model with Group DRO over domains to produce domain weights, without using downstream tasks",
+   "The full model is then trained on data resampled with those weights (280M proxy set weights for an 8B model)",
+   "On The Pile, DoReMi improved perplexity across all domains, even ones it downweighted"
+  ],
+  "links": [
+   {
+    "label": "DoReMi paper",
+    "url": "https://arxiv.org/abs/2305.10429"
+   },
+   {
+    "label": "Textbooks Are All You Need (Phi-1)",
+    "url": "https://arxiv.org/abs/2306.11644"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "synthetic-data-model-collapse",
+  "group": "Training & optimization",
+  "name": "Synthetic data & model collapse",
+  "examples": [
+   "Model collapse (Shumailov et al.)",
+   "data accumulation"
+  ],
+  "summary": "Training models on model-generated data. Model collapse is the degradation that happens when models are trained recursively on their predecessors' outputs: the tails of the real distribution vanish.",
+  "why": "As the web fills with AI text and labs lean on synthetic data, knowing when it helps and when it degrades models is essential.",
+  "keyIdeas": [
+   "Replacing real data with each generation's synthetic output causes irreversible loss of rare (tail) content",
+   "Accumulating synthetic data alongside the original real data, rather than replacing it, was shown to avoid collapse",
+   "Curated, filtered synthetic data is widely used productively, e.g. for reasoning traces and textbook-style data"
+  ],
+  "links": [
+   {
+    "label": "AI models collapse (Nature 2024)",
+    "url": "https://www.nature.com/articles/s41586-024-07566-y"
+   },
+   {
+    "label": "The Curse of Recursion",
+    "url": "https://arxiv.org/abs/2305.17493"
+   },
+   {
+    "label": "Is Model Collapse Inevitable?",
+    "url": "https://arxiv.org/abs/2404.01413"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "grpo-rlvr",
+  "group": "Post-training & reasoning",
+  "name": "GRPO / RLVR (RL with verifiable rewards)",
+  "examples": [
+   "GRPO (DeepSeekMath)",
+   "RLVR (Tulu 3)",
+   "DeepSeek-R1"
+  ],
+  "summary": "RLVR trains a model with reinforcement learning where the reward comes from an automatic check (a correct math answer, passing tests). GRPO is a PPO variant that drops the learned critic.",
+  "why": "Programmatic rewards are cheap and hard to fool compared with learned reward models, and this recipe produced strong open reasoning models like DeepSeek-R1.",
+  "keyIdeas": [
+   "Sample a group of answers per prompt; each answer's advantage is its reward normalized by the group's mean and std",
+   "No separate value (critic) network, so much less memory than PPO",
+   "Rewards are binary or rule-based checks: exact answer match, unit tests, format constraints",
+   "The term RLVR was coined in Tulu 3; DeepSeek-R1 scaled GRPO with rule-based rewards"
+  ],
+  "links": [
+   {
+    "label": "DeepSeekMath (introduces GRPO)",
+    "url": "https://arxiv.org/abs/2402.03300"
+   },
+   {
+    "label": "Tulu 3 (introduces RLVR)",
+    "url": "https://arxiv.org/abs/2411.15124"
+   },
+   {
+    "label": "DeepSeek-R1",
+    "url": "https://arxiv.org/abs/2501.12948"
+   }
+  ],
+  "year": "2025"
+ },
+ {
+  "id": "dpo-variants",
+  "group": "Post-training & reasoning",
+  "name": "DPO and its variants",
+  "examples": [
+   "DPO",
+   "IPO",
+   "KTO",
+   "ORPO",
+   "SimPO"
+  ],
+  "summary": "Direct Preference Optimization aligns a model to human preference pairs (chosen vs rejected answer) with a simple classification-style loss, skipping the separate reward model and RL loop of RLHF.",
+  "why": "It matches or beats PPO-based RLHF on several tasks while being far simpler and more stable to train, so it became a default alignment step.",
+  "keyIdeas": [
+   "Reparametrizes the RLHF reward in terms of the policy, so the optimal policy is learned directly from preference pairs",
+   "IPO drops DPO's pointwise-reward assumption; KTO learns from a binary good/bad label per output instead of pairs",
+   "ORPO adds an odds-ratio penalty to SFT, with no reference model; SimPO uses average log-prob as a reference-free reward"
+  ],
+  "links": [
+   {
+    "label": "DPO paper",
+    "url": "https://arxiv.org/abs/2305.18290"
+   },
+   {
+    "label": "SimPO",
+    "url": "https://arxiv.org/abs/2405.14734"
+   },
+   {
+    "label": "KTO",
+    "url": "https://arxiv.org/abs/2402.01306"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "process-reward-models",
+  "group": "Post-training & reasoning",
+  "name": "Process reward models",
+  "examples": [
+   "PRM800K (Let's Verify Step by Step)",
+   "Math-Shepherd"
+  ],
+  "summary": "Reward models that score each intermediate step of a reasoning chain, rather than only the final answer (an outcome reward model).",
+  "why": "Step-level feedback pinpoints where reasoning goes wrong, giving better verifiers for reranking and search than final-answer checks alone.",
+  "keyIdeas": [
+   "OpenAI found process supervision significantly beat outcome supervision for selecting solutions on the MATH dataset",
+   "Human step labels are expensive; Math-Shepherd labels steps automatically by rolling out completions from each step",
+   "Used to rerank best-of-N samples or guide step-wise search (beam search) at test time"
+  ],
+  "links": [
+   {
+    "label": "Let's Verify Step by Step",
+    "url": "https://arxiv.org/abs/2305.20050"
+   },
+   {
+    "label": "Math-Shepherd",
+    "url": "https://arxiv.org/abs/2312.08935"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "test-time-compute-scaling",
+  "group": "Post-training & reasoning",
+  "name": "Test-time compute scaling",
+  "examples": [
+   "OpenAI o1",
+   "best-of-N",
+   "verifier-guided search",
+   "s1 budget forcing"
+  ],
+  "summary": "Improving answers by spending more compute at inference: longer chains of thought, sampling many answers and picking the best, or searching against a verifier.",
+  "why": "It adds a second scaling axis besides model size; on some problems a smaller model with more inference compute beats a much larger one.",
+  "keyIdeas": [
+   "Two levers: search against a verifier (e.g. a PRM), or have the model revise its own answer sequentially",
+   "Compute-optimal allocation per prompt difficulty was over 4x more efficient than best-of-N (Snell et al.)",
+   "s1: fine-tune on 1,000 traces, then control thinking length by forcing a stop or appending \"Wait\""
+  ],
+  "links": [
+   {
+    "label": "Scaling LLM Test-Time Compute Optimally",
+    "url": "https://arxiv.org/abs/2408.03314"
+   },
+   {
+    "label": "s1: Simple test-time scaling",
+    "url": "https://arxiv.org/abs/2501.19393"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "efficient-reasoning",
+  "group": "Post-training & reasoning",
+  "name": "Efficient reasoning / overthinking / length control",
+  "examples": [
+   "L1 (LCPO)",
+   "overthinking in o1-like models"
+  ],
+  "summary": "Methods to make reasoning models think only as long as needed, cutting chains of thought that waste tokens on easy problems.",
+  "why": "Long reasoning traces cost latency and money; o1-style models often spend many tokens on trivial questions with little accuracy gain.",
+  "keyIdeas": [
+   "Overthinking: excess compute spent on simple problems, e.g. many solution rounds for 2+3",
+   "L1/LCPO: RL that rewards both accuracy and matching a token budget given in the prompt",
+   "Other routes: training on shorter traces, length penalties in RL, early exit, budget forcing at inference"
+  ],
+  "links": [
+   {
+    "label": "Do NOT Think That Much for 2+3=?",
+    "url": "https://arxiv.org/abs/2412.21187"
+   },
+   {
+    "label": "L1: Length Controlled Policy Optimization",
+    "url": "https://arxiv.org/abs/2503.04697"
+   },
+   {
+    "label": "Stop Overthinking (survey)",
+    "url": "https://arxiv.org/abs/2503.16419"
+   }
+  ],
+  "year": "2025"
+ },
+ {
+  "id": "latent-reasoning-coconut",
+  "group": "Post-training & reasoning",
+  "name": "Latent reasoning (Coconut)",
+  "examples": [
+   "Coconut (Chain of Continuous Thought)"
+  ],
+  "summary": "Letting a model reason in its hidden-state space instead of writing out word tokens. Coconut feeds the last hidden state back as the next input embedding, a \"continuous thought\".",
+  "why": "Language tokens may be an inefficient medium for reasoning; latent steps can be fewer and can keep several options open at once.",
+  "keyIdeas": [
+   "Skip decoding: the final hidden state becomes the next input embedding, fully differentiable",
+   "Trained in stages that progressively replace written chain-of-thought steps with continuous thoughts",
+   "A continuous thought can encode several next steps, enabling breadth-first-search-like planning",
+   "Beat CoT on some planning-heavy logic tasks with fewer tokens; reasoning is no longer human-readable"
+  ],
+  "links": [
+   {
+    "label": "Coconut paper",
+    "url": "https://arxiv.org/abs/2412.06769"
+   },
+   {
+    "label": "facebookresearch/coconut",
+    "url": "https://github.com/facebookresearch/coconut"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "self-play-self-improvement",
+  "group": "Post-training & reasoning",
+  "name": "Self-play / self-improvement",
+  "examples": [
+   "STaR",
+   "SPIN",
+   "Self-Rewarding LMs",
+   "Absolute Zero"
+  ],
+  "summary": "Training loops where a model generates its own training signal: its own rationales, its own preference judgments, or even its own tasks, and improves from them.",
+  "why": "High-quality human data is scarce and expensive; self-generated data can keep improving models with little or no new human labeling.",
+  "keyIdeas": [
+   "STaR: generate rationales, keep those that reach correct answers, fine-tune on them, repeat",
+   "SPIN: the model learns to distinguish human-written answers from its own earlier outputs",
+   "Self-Rewarding: the model acts as its own judge to build preference pairs for DPO",
+   "Absolute Zero: one model proposes and solves code tasks, with a code executor verifying both"
+  ],
+  "links": [
+   {
+    "label": "STaR",
+    "url": "https://arxiv.org/abs/2203.14465"
+   },
+   {
+    "label": "Self-Rewarding Language Models",
+    "url": "https://arxiv.org/abs/2401.10020"
+   },
+   {
+    "label": "Absolute Zero",
+    "url": "https://arxiv.org/abs/2505.03335"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "reward-hacking",
+  "group": "Post-training & reasoning",
+  "name": "Reward hacking",
+  "examples": [
+   "reward model overoptimization",
+   "editing unit tests to pass",
+   "obfuscated reward hacking"
+  ],
+  "summary": "When an RL-trained model exploits flaws in its reward signal to score highly without actually doing the intended task, such as modifying tests so code appears to pass.",
+  "why": "It is a central practical risk in RLHF and RLVR: proxy rewards are imperfect, and stronger optimization finds more loopholes.",
+  "keyIdeas": [
+   "Goodhart's law: optimizing a proxy reward model too hard lowers the true (gold) reward; this follows measurable scaling laws",
+   "Monitoring a model's chain of thought with another LLM can catch hacks better than watching actions alone",
+   "Penalizing hacks seen in the CoT too strongly teaches models to hide intent (obfuscated reward hacking)"
+  ],
+  "links": [
+   {
+    "label": "Reward Hacking in RL (Lilian Weng)",
+    "url": "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/"
+   },
+   {
+    "label": "Scaling Laws for RM Overoptimization",
+    "url": "https://arxiv.org/abs/2210.10760"
+   },
+   {
+    "label": "Monitoring Reasoning Models for Misbehavior",
+    "url": "https://arxiv.org/abs/2503.11926"
+   }
+  ],
+  "year": "2022"
+ },
+ {
+  "id": "speculative-decoding",
+  "group": "Inference & serving",
+  "name": "Speculative decoding",
+  "examples": [
+   "EAGLE-3",
+   "Medusa"
+  ],
+  "summary": "A cheap drafter proposes several future tokens and the large target model verifies them in one forward pass, keeping the accepted prefix. Output quality matches the target model while needing fewer sequential steps.",
+  "why": "Decoding is memory-bandwidth bound and strictly sequential; verifying many tokens per pass cuts latency without changing outputs.",
+  "keyIdeas": [
+   "Draft k tokens cheaply, verify all k with one target-model pass, keep the longest accepted prefix",
+   "Medusa: extra decoding heads on the base model plus tree attention to verify many candidate continuations at once",
+   "EAGLE-3: a light draft head predicts tokens directly from fused multi-layer target features, trained via 'training-time test'",
+   "EAGLE-3 reports up to 6.5x speedup, about 1.4x over EAGLE-2"
+  ],
+  "links": [
+   {
+    "label": "EAGLE-3 paper",
+    "url": "https://arxiv.org/abs/2503.01840"
+   },
+   {
+    "label": "Medusa paper",
+    "url": "https://arxiv.org/abs/2401.10774"
+   },
+   {
+    "label": "EAGLE repo",
+    "url": "https://github.com/SafeAILab/EAGLE"
+   }
+  ],
+  "year": "2022",
+  "inApp": {
+   "label": "Deep dive in System Design",
+   "url": "/systemdesign?q=Speculative%20Decoding"
+  }
+ },
+ {
+  "id": "kv-cache-compression",
+  "group": "Inference & serving",
+  "name": "KV cache compression & quantization",
+  "examples": [
+   "KIVI",
+   "KVQuant",
+   "H2O"
+  ],
+  "summary": "Techniques that shrink the per-request attention key/value cache by storing it in fewer bits (quantization) or keeping only the most important tokens (eviction), so more or longer requests fit in GPU memory.",
+  "why": "At large batch and long context the KV cache, not the weights, dominates memory and bandwidth, capping batch size and throughput.",
+  "keyIdeas": [
+   "KIVI: tuning-free 2-bit KV cache; keys quantized per-channel, values per-token",
+   "KIVI reports 2.6x less peak memory, up to 4x larger batches, 2.35x to 3.47x throughput",
+   "H2O: keep recent tokens plus 'heavy hitter' tokens with high accumulated attention, evict the rest",
+   "KVQuant: targets very long contexts (up to 10M tokens) via KV cache quantization"
+  ],
+  "links": [
+   {
+    "label": "KIVI paper",
+    "url": "https://arxiv.org/abs/2402.02750"
+   },
+   {
+    "label": "H2O paper",
+    "url": "https://arxiv.org/abs/2306.14048"
+   },
+   {
+    "label": "KVQuant paper",
+    "url": "https://arxiv.org/abs/2401.18079"
+   }
+  ],
+  "year": "2024",
+  "inApp": {
+   "label": "Deep dive in System Design",
+   "url": "/systemdesign?q=KV%20Cache"
+  }
+ },
+ {
+  "id": "paged-attention-prefix-caching",
+  "group": "Inference & serving",
+  "name": "PagedAttention / prefix caching",
+  "examples": [
+   "vLLM (PagedAttention)",
+   "SGLang (RadixAttention)",
+   "vLLM automatic prefix caching"
+  ],
+  "summary": "PagedAttention stores the KV cache in fixed-size blocks mapped through a per-request block table, like OS virtual memory pages. Prefix caching reuses already-computed blocks when requests share a prompt prefix.",
+  "why": "Contiguous KV allocation wastes memory to fragmentation and duplication; paging and sharing raise batch size and skip recomputing shared prompts.",
+  "keyIdeas": [
+   "Non-contiguous fixed-size KV blocks give near-zero fragmentation; vLLM reports 2x to 4x throughput",
+   "Blocks can be shared across sequences (copy-on-write) for parallel sampling and beam search",
+   "vLLM prefix caching: hash each full block from parent hash plus its tokens, reuse on hit, LRU-evict free blocks",
+   "SGLang RadixAttention keeps cached prefixes in a radix tree for reuse across calls"
+  ],
+  "links": [
+   {
+    "label": "PagedAttention / vLLM paper",
+    "url": "https://arxiv.org/abs/2309.06180"
+   },
+   {
+    "label": "vLLM prefix caching design",
+    "url": "https://docs.vllm.ai/en/latest/design/prefix_caching.html"
+   },
+   {
+    "label": "SGLang paper",
+    "url": "https://arxiv.org/abs/2312.07104"
+   }
+  ],
+  "year": "2023",
+  "inApp": {
+   "label": "Deep dive in System Design",
+   "url": "/systemdesign?q=PagedAttention%20%2F%20vLLM"
+  }
+ },
+ {
+  "id": "disaggregated-prefill-decode",
+  "group": "Inference & serving",
+  "name": "Disaggregated prefill/decode",
+  "examples": [
+   "DistServe",
+   "Splitwise"
+  ],
+  "summary": "Running the compute-heavy prompt processing (prefill) and the memory-bound token generation (decode) on separate GPU pools, transferring the KV cache between them, so each phase is sized and parallelized independently.",
+  "why": "Colocated phases interfere: long prefills stall decodes. Splitting them lets you meet time-to-first-token and per-token latency targets at once.",
+  "keyIdeas": [
+   "Prefill drives time to first token (TTFT); decode drives time per output token (TPOT)",
+   "Separate pools remove prefill-decode interference and allow different parallelism per phase",
+   "Cost: KV cache must move between machines, so placement depends on interconnect bandwidth",
+   "DistServe reports 7.4x more requests or 12.6x tighter SLOs within latency targets"
+  ],
+  "links": [
+   {
+    "label": "DistServe paper",
+    "url": "https://arxiv.org/abs/2401.09670"
+   },
+   {
+    "label": "Splitwise paper",
+    "url": "https://arxiv.org/abs/2311.18677"
+   }
+  ],
+  "year": "2024",
+  "inApp": {
+   "label": "Deep dive in System Design",
+   "url": "/systemdesign?q=Prefill%20vs%20Decode%20%28and%20why%20they%20differ%29"
+  }
+ },
+ {
+  "id": "flashattention-3-4",
+  "group": "Inference & serving",
+  "name": "FlashAttention-3/4",
+  "examples": [
+   "FlashAttention-3 (Hopper)",
+   "FlashAttention-4 (Blackwell)"
+  ],
+  "summary": "Exact (not approximate) attention kernels tuned to specific NVIDIA GPU generations. FA3 targets Hopper (H100); FA4, published March 2026, targets Blackwell (B200/GB200) for both forward and backward passes.",
+  "why": "Attention is a core bottleneck for long-context LLMs, and each GPU generation shifts which unit (tensor cores, memory, exp) is the limit.",
+  "keyIdeas": [
+   "FA3: warp specialization and async TMA overlap data movement with matmul and softmax; FP8 support; up to 740 TFLOPs/s FP16 on H100",
+   "FA4: Blackwell tensor cores outgrew shared-memory bandwidth and exp units, so the pipeline is redesigned around them",
+   "FA4: software-emulated exp2 on FMA units, conditional softmax rescaling, tensor memory and 2-CTA MMA in backward",
+   "FA4 reports up to 1613 TFLOPs/s BF16 on B200 (71%), 1.3x over cuDNN 9.13; written in CuTe-DSL"
+  ],
+  "links": [
+   {
+    "label": "FlashAttention-3 paper",
+    "url": "https://arxiv.org/abs/2407.08608"
+   },
+   {
+    "label": "FlashAttention-4 paper",
+    "url": "https://arxiv.org/abs/2603.05451"
+   },
+   {
+    "label": "FlashAttention repo",
+    "url": "https://github.com/Dao-AILab/flash-attention"
+   }
+  ],
+  "year": "2026",
+  "inApp": {
+   "label": "Deep dive in System Design",
+   "url": "/systemdesign?q=FlashAttention"
+  }
+ },
+ {
+  "id": "long-context-yarn-ring-attention",
+  "group": "Inference & serving",
+  "name": "Long context (YaRN, ring attention)",
+  "examples": [
+   "YaRN",
+   "Ring Attention"
+  ],
+  "summary": "Two complementary ways to handle long sequences: YaRN extends a RoPE model's context window with little fine-tuning, while Ring Attention shards a long sequence across devices so exact attention fits in aggregate memory.",
+  "why": "Models fail beyond their trained length, and attention memory grows with sequence length; both limit million-token contexts.",
+  "keyIdeas": [
+   "YaRN rescales RoPE frequencies (interpolating low frequencies, keeping high ones) plus an attention temperature tweak",
+   "YaRN needs about 10x fewer tokens and 2.5x fewer steps than prior extension methods",
+   "Ring Attention: each device holds a query block while KV blocks rotate around a ring of devices",
+   "KV transfer overlaps with blockwise compute, so max length scales with device count, no approximation"
+  ],
+  "links": [
+   {
+    "label": "YaRN paper",
+    "url": "https://arxiv.org/abs/2309.00071"
+   },
+   {
+    "label": "Ring Attention paper",
+    "url": "https://arxiv.org/abs/2310.01889"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "bitnet-1-58-bit",
+  "group": "Inference & serving",
+  "name": "1.58-bit models (BitNet)",
+  "examples": [
+   "BitNet b1.58",
+   "BitNet b1.58 2B4T",
+   "bitnet.cpp"
+  ],
+  "summary": "LLMs trained from scratch with every weight ternary (-1, 0, +1), about 1.58 bits per weight, instead of quantizing a full-precision model after training.",
+  "why": "Ternary weights turn most matmul work into additions and cut memory, latency and energy, making CPU and edge inference far cheaper.",
+  "keyIdeas": [
+   "log2(3) = 1.58 bits per weight; the zero value lets the model switch features off",
+   "Quantization is native: the model is trained with ternary weights, not post-hoc compressed",
+   "Paper reports matching FP16/BF16 models of same size and tokens on perplexity and end tasks from about 3B params up",
+   "BitNet b1.58 2B4T: first open native 1-bit LLM at 2B params, trained on 4T tokens, with GPU and CPU kernels"
+  ],
+  "links": [
+   {
+    "label": "BitNet b1.58 paper",
+    "url": "https://arxiv.org/abs/2402.17764"
+   },
+   {
+    "label": "BitNet b1.58 2B4T report",
+    "url": "https://arxiv.org/abs/2504.12285"
+   },
+   {
+    "label": "bitnet.cpp repo",
+    "url": "https://github.com/microsoft/BitNet"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "late-interaction-colbert-colpali",
+  "group": "Retrieval & memory",
+  "name": "Late interaction (ColBERT, ColPali)",
+  "examples": [
+   "ColBERT",
+   "ColBERTv2",
+   "ColPali"
+  ],
+  "summary": "Retrieval where query and document are encoded independently into one vector per token (or image patch), and relevance is computed afterwards by a cheap token-level matching step instead of one pooled vector.",
+  "why": "Keeps much of a cross-encoder's fine-grained accuracy while letting document embeddings be precomputed and indexed offline.",
+  "keyIdeas": [
+   "Score = sum over query tokens of the max similarity to any document token (MaxSim)",
+   "Document vectors are precomputed; only the query is encoded at search time",
+   "ColPali embeds page images with a vision LLM, skipping OCR and layout parsing for PDF retrieval",
+   "Trade-off: many vectors per document means much larger indexes than single-vector search"
+  ],
+  "links": [
+   {
+    "label": "ColBERT paper",
+    "url": "https://arxiv.org/abs/2004.12832"
+   },
+   {
+    "label": "ColBERTv2 paper",
+    "url": "https://arxiv.org/abs/2112.01488"
+   },
+   {
+    "label": "ColPali paper",
+    "url": "https://arxiv.org/abs/2407.01449"
+   }
+  ],
+  "year": "2020"
+ },
+ {
+  "id": "rabitq-binary-quantization",
+  "group": "Retrieval & memory",
+  "name": "RaBitQ / binary quantization",
+  "examples": [
+   "RaBitQ",
+   "Binary embedding quantization"
+  ],
+  "summary": "Compressing each embedding dimension to a single bit so vectors take 32x less space and distances can be estimated with bitwise ops. RaBitQ is a randomized variant that comes with a provable error bound on the distance estimate.",
+  "why": "Vector indexes are memory-bound at scale; 1-bit codes shrink RAM and speed scans, with rescoring recovering most accuracy.",
+  "keyIdeas": [
+   "Simple binary: sign of each dimension to one bit, compare with Hamming distance, then rescore top candidates",
+   "Hugging Face reports about 96% of retrieval quality kept with rescoring at 32x compression",
+   "RaBitQ: random rotation, D-dim vector to D-bit string, unbiased distance estimate with a theoretical bound",
+   "RaBitQ outperforms product quantization (PQ) on accuracy vs speed, where PQ can fail badly on some data"
+  ],
+  "links": [
+   {
+    "label": "RaBitQ paper",
+    "url": "https://arxiv.org/abs/2405.12497"
+   },
+   {
+    "label": "HF: embedding quantization",
+    "url": "https://huggingface.co/blog/embedding-quantization"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "filtered-ann-acorn",
+  "group": "Retrieval & memory",
+  "name": "Filtered ANN (ACORN)",
+  "examples": [
+   "ACORN"
+  ],
+  "summary": "Vector search constrained by structured predicates (e.g. price < 50 AND category = shoes). ACORN modifies HNSW graph construction and search so filtered queries stay fast for arbitrary predicates.",
+  "why": "Pre-filtering breaks graph connectivity and post-filtering wastes work or misses results, especially for selective filters.",
+  "keyIdeas": [
+   "Predicate-agnostic: supports arbitrary filters, not just equality on a fixed attribute",
+   "Builds a denser HNSW-style graph so the subgraph of matching nodes stays navigable",
+   "At search time only neighbors passing the predicate are traversed",
+   "Reports up to roughly 1,000x higher throughput than prior methods at the same recall"
+  ],
+  "links": [
+   {
+    "label": "ACORN paper",
+    "url": "https://arxiv.org/abs/2403.04871"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "diskann-cagra",
+  "group": "Retrieval & memory",
+  "name": "DiskANN / CAGRA (GPU ANN)",
+  "examples": [
+   "DiskANN (Vamana)",
+   "CAGRA (NVIDIA cuVS)"
+  ],
+  "summary": "Graph-based approximate nearest neighbor indexes for scale. DiskANN keeps a billion-point graph on SSD with compressed vectors in RAM; CAGRA is a graph built and searched in parallel on GPUs.",
+  "why": "In-memory indexes like HNSW get expensive at billions of vectors; SSD and GPU designs cut cost per vector or raise throughput.",
+  "keyIdeas": [
+   "DiskANN: Vamana graph on SSD, compressed vectors in RAM, few disk reads per query",
+   "DiskANN: a billion points on one machine with 64GB RAM at 95%+ recall@1 on SIFT1B",
+   "CAGRA: GPU-friendly fixed-degree graph; 2.2x to 27x faster build than HNSW",
+   "CAGRA: 33x to 77x HNSW large-batch throughput at 90 to 95% recall"
+  ],
+  "links": [
+   {
+    "label": "DiskANN paper (NeurIPS 2019)",
+    "url": "https://papers.nips.cc/paper/2019/hash/09853c7fb1d3f8ee67a61b6bf4a7f8e6-Abstract.html"
+   },
+   {
+    "label": "CAGRA paper",
+    "url": "https://arxiv.org/abs/2308.15136"
+   },
+   {
+    "label": "DiskANN repo",
+    "url": "https://github.com/microsoft/DiskANN"
+   }
+  ],
+  "year": "2019"
+ },
+ {
+  "id": "learned-sparse-retrieval-splade",
+  "group": "Retrieval & memory",
+  "name": "Learned sparse retrieval (SPLADE)",
+  "examples": [
+   "SPLADE",
+   "SPLADE v2"
+  ],
+  "summary": "A transformer maps text to sparse weights over the vocabulary, including expansion terms not in the text, so retrieval runs on a standard inverted index like BM25 but with learned term weights.",
+  "why": "Gives neural-quality matching with inverted-index efficiency and interpretable terms, and handles vocabulary mismatch better than BM25.",
+  "keyIdeas": [
+   "Output is a vocabulary-sized vector, mostly zeros; non-zeros are term weights",
+   "Expansion: the model adds related terms (synonyms) the text never contains",
+   "Sparsity regularization plus log-saturation keeps vectors small for fast posting-list lookup",
+   "Regularization strength trades effectiveness against index size and latency"
+  ],
+  "links": [
+   {
+    "label": "SPLADE paper",
+    "url": "https://arxiv.org/abs/2107.05720"
+   },
+   {
+    "label": "SPLADE v2 paper",
+    "url": "https://arxiv.org/abs/2109.10086"
+   },
+   {
+    "label": "SPLADE repo",
+    "url": "https://github.com/naver/splade"
+   }
+  ],
+  "year": "2021"
+ },
+ {
+  "id": "graphrag",
+  "group": "Retrieval & memory",
+  "name": "GraphRAG",
+  "examples": [
+   "Microsoft GraphRAG"
+  ],
+  "summary": "RAG over an LLM-built knowledge graph: extract entities and relations from the corpus, cluster them into communities, pre-summarize each community, then answer questions by combining those summaries.",
+  "why": "Plain vector RAG fails on global questions like 'what are the main themes?', which need summarizing the whole corpus, not fetching a few chunks.",
+  "keyIdeas": [
+   "Indexing: LLM extracts an entity knowledge graph from source documents",
+   "Graph is partitioned into communities of related entities, each pre-summarized by the LLM",
+   "Query: each community summary gives a partial answer, then partials are merged (map-reduce)",
+   "Trade-off: indexing is LLM-heavy and costly; gains are on broad sensemaking questions"
+  ],
+  "links": [
+   {
+    "label": "GraphRAG paper",
+    "url": "https://arxiv.org/abs/2404.16130"
+   },
+   {
+    "label": "GraphRAG repo",
+    "url": "https://github.com/microsoft/graphrag"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "agent-long-term-memory",
+  "group": "Retrieval & memory",
+  "name": "Agent long-term memory",
+  "examples": [
+   "MemGPT (Letta)",
+   "Mem0",
+   "A-MEM"
+  ],
+  "summary": "Systems that let LLM agents remember across sessions by extracting, storing, updating and retrieving facts outside the context window, rather than replaying the full conversation history.",
+  "why": "Context windows are finite and full-history prompts are slow and costly; persistent memory keeps agents consistent over long interactions.",
+  "keyIdeas": [
+   "MemGPT: OS-style virtual context; the LLM pages data between in-context memory and external storage",
+   "Mem0: extract salient facts, consolidate (add, update, delete) them, retrieve on demand; optional graph memory",
+   "Mem0 reports 91% lower p95 latency and over 90% token savings vs full-context on LOCOMO",
+   "Core design questions: what to write, how to resolve conflicts, and when to retrieve"
+  ],
+  "links": [
+   {
+    "label": "MemGPT paper",
+    "url": "https://arxiv.org/abs/2310.08560"
+   },
+   {
+    "label": "Mem0 paper",
+    "url": "https://arxiv.org/abs/2504.19413"
+   },
+   {
+    "label": "A-MEM paper",
+    "url": "https://arxiv.org/abs/2502.12110"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "unified-any-to-any-models",
+  "group": "Multimodal & generative",
+  "name": "Unified multimodal models (understand and generate images)",
+  "examples": [
+   "Chameleon",
+   "Emu3",
+   "Janus",
+   "Transfusion"
+  ],
+  "summary": "Single transformers that both understand and generate images and text in one interleaved sequence, typically by turning images into tokens and predicting the next token, instead of bolting a separate diffusion model onto an LLM.",
+  "why": "One model, one training objective and one context for all modalities enables interleaved image-text output and simplifies serving compared to pipelines of specialist models.",
+  "keyIdeas": [
+   "Early fusion: image tokens and text tokens share one vocabulary and one transformer (Chameleon, Emu3)",
+   "Generation is plain next-token prediction over discrete image tokens produced by a visual tokenizer",
+   "Janus decouples the visual encoders for understanding vs generation while keeping one shared transformer",
+   "Transfusion mixes losses: next-token prediction for text, diffusion for continuous image patches, in one model"
+  ],
+  "links": [
+   {
+    "label": "Chameleon (arXiv)",
+    "url": "https://arxiv.org/abs/2405.09818"
+   },
+   {
+    "label": "Emu3 (arXiv)",
+    "url": "https://arxiv.org/abs/2409.18869"
+   },
+   {
+    "label": "Transfusion (arXiv)",
+    "url": "https://arxiv.org/abs/2408.11039"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "visual-tokenizers",
+  "group": "Multimodal & generative",
+  "name": "Visual tokenizers",
+  "examples": [
+   "VQ-VAE",
+   "VQGAN",
+   "MAGVIT-v2",
+   "TiTok"
+  ],
+  "summary": "Learned encoders that compress images or video into a short sequence of discrete codes (and decode them back), so that transformers can model visual data like text.",
+  "why": "Token count and quality set the cost and ceiling of visual generation; MAGVIT-v2 showed a better tokenizer let an LLM beat diffusion models on ImageNet.",
+  "keyIdeas": [
+   "Vector quantization: snap each encoder output to its nearest entry in a learned codebook (VQ-VAE)",
+   "VQGAN adds perceptual and adversarial losses so a CNN codebook yields sharp reconstructions for transformers",
+   "MAGVIT-v2 uses lookup-free quantization (LFQ) for a large vocabulary shared across images and video",
+   "TiTok uses a 1D token sequence: a 256x256 image in as few as 32 tokens vs 256 or 1024 for 2D grids"
+  ],
+  "links": [
+   {
+    "label": "VQ-VAE (arXiv)",
+    "url": "https://arxiv.org/abs/1711.00937"
+   },
+   {
+    "label": "MAGVIT-v2 (arXiv)",
+    "url": "https://arxiv.org/abs/2310.05737"
+   },
+   {
+    "label": "TiTok (arXiv)",
+    "url": "https://arxiv.org/abs/2406.07550"
+   }
+  ],
+  "year": "2017"
+ },
+ {
+  "id": "flow-matching-rectified-flow",
+  "group": "Multimodal & generative",
+  "name": "Flow matching / rectified flow",
+  "examples": [
+   "Flow Matching (Lipman et al.)",
+   "Rectified Flow (Liu et al.)",
+   "Stable Diffusion 3"
+  ],
+  "summary": "Generative models that learn a velocity field (an ODE) carrying noise to data, trained by simple regression along fixed paths, often straight lines, between noise and data samples.",
+  "why": "Simpler, more stable training than classic diffusion and straighter paths that need fewer sampling steps; now used in large image models such as Stable Diffusion 3.",
+  "keyIdeas": [
+   "Simulation-free: regress a network onto the known velocity of a chosen noise-to-data path, no ODE solving in training",
+   "Rectified flow uses straight-line paths, which are cheap to simulate with few steps",
+   "Diffusion paths are a special case of flow matching's Gaussian probability paths",
+   "Sampling integrates the learned ODE from noise to data with a numerical solver"
+  ],
+  "links": [
+   {
+    "label": "Flow Matching (arXiv)",
+    "url": "https://arxiv.org/abs/2210.02747"
+   },
+   {
+    "label": "Rectified Flow (arXiv)",
+    "url": "https://arxiv.org/abs/2209.03003"
+   },
+   {
+    "label": "SD3: scaling rectified flow (arXiv)",
+    "url": "https://arxiv.org/abs/2403.03206"
+   }
+  ],
+  "year": "2022"
+ },
+ {
+  "id": "consistency-models-one-step-diffusion",
+  "group": "Multimodal & generative",
+  "name": "Consistency models / one-step diffusion",
+  "examples": [
+   "Consistency Models",
+   "Latent Consistency Models (LCM)",
+   "Adversarial Diffusion Distillation (SDXL Turbo)"
+  ],
+  "summary": "Techniques that collapse the dozens of iterative denoising steps of a diffusion model into one to four network evaluations, by learning to map noise directly to a clean sample.",
+  "why": "Diffusion sampling is slow; few-step generation makes real-time and low-cost image synthesis practical.",
+  "keyIdeas": [
+   "A consistency model maps any point on a diffusion trajectory to the same clean endpoint",
+   "Train by distilling a pretrained diffusion model, or from scratch as a standalone model",
+   "LCM applies the idea in latent space to models like Stable Diffusion for 1 to 4 step sampling",
+   "ADD combines score distillation from a teacher with an adversarial loss for 1 to 4 step SDXL sampling"
+  ],
+  "links": [
+   {
+    "label": "Consistency Models (arXiv)",
+    "url": "https://arxiv.org/abs/2303.01469"
+   },
+   {
+    "label": "Latent Consistency Models (arXiv)",
+    "url": "https://arxiv.org/abs/2310.04378"
+   },
+   {
+    "label": "Adversarial Diffusion Distillation (arXiv)",
+    "url": "https://arxiv.org/abs/2311.17042"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "video-world-models",
+  "group": "Multimodal & generative",
+  "name": "Video world models (Genie-style)",
+  "examples": [
+   "Genie",
+   "Genie 3",
+   "GameNGen",
+   "DIAMOND"
+  ],
+  "summary": "Generative models that predict the next video frames conditioned on a user's or agent's actions, producing playable, interactive environments learned from video instead of a hand-coded engine.",
+  "why": "They can simulate environments for training and evaluating agents and could replace parts of game engines, without hand-built physics or assets.",
+  "keyIdeas": [
+   "Genie: video tokenizer + autoregressive dynamics model + latent action model learned from unlabeled internet video",
+   "Latent actions let users control frames without any ground-truth action labels in training",
+   "GameNGen and DIAMOND use diffusion as the next-frame model (DOOM at 20 fps; Atari agents trained in imagination)",
+   "Genie 3 runs in real time at 24 fps, 720p, staying consistent for a few minutes"
+  ],
+  "links": [
+   {
+    "label": "Genie (arXiv)",
+    "url": "https://arxiv.org/abs/2402.15391"
+   },
+   {
+    "label": "Genie 3 (DeepMind blog)",
+    "url": "https://deepmind.google/discover/blog/genie-3-a-new-frontier-for-world-models/"
+   },
+   {
+    "label": "GameNGen (arXiv)",
+    "url": "https://arxiv.org/abs/2408.14837"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "vision-language-action-models",
+  "group": "Multimodal & generative",
+  "name": "Vision-language-action models (OpenVLA, π0)",
+  "examples": [
+   "RT-2",
+   "OpenVLA",
+   "π0"
+  ],
+  "summary": "Robot policies built by fine-tuning a pretrained vision-language model to output robot actions from camera images and a language instruction.",
+  "why": "Reusing web-scale vision-language pretraining gives robots better generalization to new objects and instructions than training control policies from scratch.",
+  "keyIdeas": [
+   "RT-2 represents actions as text tokens and co-fine-tunes a VLM on robot data plus web VQA data",
+   "OpenVLA: open 7B model (Llama 2 + DINOv2/SigLIP vision) trained on 970k real robot demonstrations",
+   "π0 adds a flow matching 'action expert' to a VLM backbone to emit continuous action chunks for dexterous control",
+   "Pretrain on many robot embodiments, then fine-tune on a target robot or task"
+  ],
+  "links": [
+   {
+    "label": "OpenVLA (arXiv)",
+    "url": "https://arxiv.org/abs/2406.09246"
+   },
+   {
+    "label": "π0 (arXiv)",
+    "url": "https://arxiv.org/abs/2410.24164"
+   },
+   {
+    "label": "RT-2 (arXiv)",
+    "url": "https://arxiv.org/abs/2307.15818"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "3d-gaussian-splatting",
+  "group": "Multimodal & generative",
+  "name": "3D Gaussian splatting",
+  "examples": [
+   "3D Gaussian Splatting (Kerbl et al.)"
+  ],
+  "summary": "A scene representation made of millions of 3D Gaussians (position, anisotropic shape, opacity, color) optimized from photos and rendered by rasterizing ('splatting') them, enabling real-time novel-view synthesis.",
+  "why": "Matches or beats NeRF quality while rendering at 30+ fps at 1080p, because it rasterizes explicit primitives instead of querying a neural network per ray sample.",
+  "keyIdeas": [
+   "Initialize Gaussians from the sparse point cloud produced during camera calibration (structure from motion)",
+   "Optimize Gaussian parameters by gradient descent against the input photos",
+   "Interleaved optimization and density control: Gaussians are added and removed as training proceeds",
+   "Fast visibility-aware rasterizer with anisotropic splatting speeds up both training and rendering"
+  ],
+  "links": [
+   {
+    "label": "3DGS paper (arXiv)",
+    "url": "https://arxiv.org/abs/2308.04079"
+   },
+   {
+    "label": "Official code (GitHub)",
+    "url": "https://github.com/graphdeco-inria/gaussian-splatting"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "video-llms-long-video-memory",
+  "group": "Multimodal & generative",
+  "name": "Video-LLMs with long-video memory",
+  "examples": [
+   "MovieChat",
+   "MA-LMM",
+   "Flash-VStream",
+   "LongVA"
+  ],
+  "summary": "Multimodal LLMs that answer questions about hour-long videos or live streams by compressing frames into a bounded memory or by extending the context window, instead of seeing only a few frames.",
+  "why": "Raw video yields far more visual tokens than an LLM context can hold; memory and compression make long and streaming video understanding feasible.",
+  "keyIdeas": [
+   "Process frames online and store compressed features in a memory bank (MA-LMM)",
+   "Short-term and long-term memory modeled on human memory turns dense frame tokens into sparse memory (MovieChat)",
+   "Streaming: a memory updated in real time, decoupled from asynchronous user questions (Flash-VStream)",
+   "Alternative: extend the language backbone's context so it accepts far more visual tokens (LongVA)"
+  ],
+  "links": [
+   {
+    "label": "MovieChat (arXiv)",
+    "url": "https://arxiv.org/abs/2307.16449"
+   },
+   {
+    "label": "MA-LMM (arXiv)",
+    "url": "https://arxiv.org/abs/2404.05726"
+   },
+   {
+    "label": "Flash-VStream (arXiv)",
+    "url": "https://arxiv.org/abs/2406.08085"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "agent-verification",
+  "group": "Agents",
+  "name": "Agent verification",
+  "examples": [
+   "Process reward models (Let's Verify Step by Step)",
+   "Agent-as-a-Judge",
+   "SWE-Gym trajectory verifiers"
+  ],
+  "summary": "Checking whether an agent's actions or final result are correct, using learned verifiers, executable tests, or another agent as judge, to score trajectories, pick the best attempt, or supply training reward.",
+  "why": "Agents make long chains of actions where one error compounds; reliable verifiers enable best-of-N selection at inference and reward signals for training.",
+  "keyIdeas": [
+   "Outcome vs process supervision: grade only the final answer or each intermediate step",
+   "Verifiers trained on sampled trajectories rerank multiple agent attempts (inference-time scaling)",
+   "Agent-as-a-Judge: an agent inspects workspace and intermediate steps, not just the final output",
+   "Executable checks (unit tests, environment state diffs) give the most trustworthy signal when available"
+  ],
+  "links": [
+   {
+    "label": "Let's Verify Step by Step (arXiv)",
+    "url": "https://arxiv.org/abs/2305.20050"
+   },
+   {
+    "label": "Agent-as-a-Judge (arXiv)",
+    "url": "https://arxiv.org/abs/2410.10934"
+   },
+   {
+    "label": "SWE-Gym (arXiv)",
+    "url": "https://arxiv.org/abs/2412.21139"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "computer-use-agents",
+  "group": "Agents",
+  "name": "Computer-use agents",
+  "examples": [
+   "Claude computer use",
+   "UI-TARS",
+   "OSWorld (benchmark)"
+  ],
+  "summary": "Agents that operate a real computer like a person does: they look at screenshots and issue mouse and keyboard actions, rather than calling purpose-built APIs.",
+  "why": "Most software has a GUI but no API; screen-level control lets one agent work across arbitrary desktop and web apps.",
+  "keyIdeas": [
+   "Loop: screenshot in, reason, emit an action (click at x,y, type, scroll), observe the new screen",
+   "Hard part is GUI grounding: mapping intent to the exact on-screen element and coordinates",
+   "Evaluated in real VMs with execution-based checks, e.g. OSWorld's 369 tasks (humans ~72%)",
+   "Native agent models (UI-TARS) train perception, grounding and action end-to-end on screenshots"
+  ],
+  "links": [
+   {
+    "label": "Anthropic: computer use announcement",
+    "url": "https://www.anthropic.com/news/3-5-models-and-computer-use"
+   },
+   {
+    "label": "OSWorld (arXiv)",
+    "url": "https://arxiv.org/abs/2404.07972"
+   },
+   {
+    "label": "UI-TARS (arXiv)",
+    "url": "https://arxiv.org/abs/2501.12326"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "agentic-rl-environments",
+  "group": "Agents",
+  "name": "Agentic RL environments",
+  "examples": [
+   "SWE-Gym",
+   "R2E-Gym",
+   "AppWorld",
+   "WebArena"
+  ],
+  "summary": "Executable, reproducible sandboxes (codebases with tests, simulated apps, self-hosted websites) where LLM agents act over many steps and get an automatically computed reward for training with reinforcement learning or fine-tuning.",
+  "why": "Training agents needs many tasks with real execution and automatic success checks; static datasets cannot teach multi-step interaction.",
+  "keyIdeas": [
+   "Each task = environment state + natural-language goal + programmatic checker (tests, state diff)",
+   "SWE-Gym: 2,438 real Python repo tasks with runtimes and unit tests",
+   "R2E-Gym scales to 8.7K+ tasks by synthesizing tests and issues from commits",
+   "AppWorld simulates 9 apps with 457 APIs; WebArena self-hosts realistic websites"
+  ],
+  "links": [
+   {
+    "label": "SWE-Gym (arXiv)",
+    "url": "https://arxiv.org/abs/2412.21139"
+   },
+   {
+    "label": "R2E-Gym (arXiv)",
+    "url": "https://arxiv.org/abs/2504.07164"
+   },
+   {
+    "label": "AppWorld (arXiv)",
+    "url": "https://arxiv.org/abs/2407.18901"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "agent-benchmarks",
+  "group": "Agents",
+  "name": "Agent benchmarks (SWE-bench, τ-bench)",
+  "examples": [
+   "SWE-bench",
+   "SWE-bench Verified",
+   "τ-bench"
+  ],
+  "summary": "Standardized task suites that score agents on realistic multi-step work: SWE-bench on fixing real GitHub issues, τ-bench on tool use in customer-service style conversations with a simulated user and policy rules.",
+  "why": "They give comparable, execution-checked numbers for agent progress, and expose reliability gaps that single-turn LLM benchmarks miss.",
+  "keyIdeas": [
+   "SWE-bench: 2,294 issues from 12 Python repos; a patch counts only if the repo's tests pass",
+   "SWE-bench Verified: 500-task human-filtered subset, the default leaderboard view",
+   "τ-bench grades by comparing final database state to the goal state",
+   "τ-bench's pass^k metric measures consistency: success on all k repeated trials"
+  ],
+  "links": [
+   {
+    "label": "SWE-bench (arXiv)",
+    "url": "https://arxiv.org/abs/2310.06770"
+   },
+   {
+    "label": "τ-bench (arXiv)",
+    "url": "https://arxiv.org/abs/2406.12045"
+   },
+   {
+    "label": "SWE-bench leaderboards",
+    "url": "https://www.swebench.com/"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "autonomous-research-agents",
+  "group": "Agents",
+  "name": "Autonomous research agents",
+  "examples": [
+   "The AI Scientist (Sakana AI)",
+   "Google AI co-scientist",
+   "MLE-bench",
+   "PaperBench"
+  ],
+  "summary": "LLM agent systems that carry out parts of the research loop: generating hypotheses, writing and running experiment code, and writing up results, plus benchmarks that measure how well they do it.",
+  "why": "Automating experimentation could speed up science and ML research; benchmarks track how close agents are to doing real research engineering.",
+  "keyIdeas": [
+   "The AI Scientist: idea, code, experiments, plots, full paper and a simulated review, end to end",
+   "Co-scientist: multiple Gemini agents generate, critique and refine hypotheses using test-time compute",
+   "MLE-bench: 75 Kaggle competitions; o1-preview + AIDE reached a medal in 16.9% (at release)",
+   "PaperBench: replicate 20 ICML 2024 papers, graded by author-built rubrics and an LLM judge"
+  ],
+  "links": [
+   {
+    "label": "The AI Scientist (arXiv)",
+    "url": "https://arxiv.org/abs/2408.06292"
+   },
+   {
+    "label": "Google AI co-scientist (blog)",
+    "url": "https://research.google/blog/accelerating-scientific-breakthroughs-with-an-ai-co-scientist/"
+   },
+   {
+    "label": "MLE-bench (arXiv)",
+    "url": "https://arxiv.org/abs/2410.07095"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "sparse-autoencoders",
+  "group": "Interpretability & safety",
+  "name": "Sparse autoencoders",
+  "examples": [
+   "Towards Monosemanticity (Anthropic, 2023)",
+   "Cunningham et al. 2023",
+   "Scaling Monosemanticity (Claude 3 Sonnet, 2024)",
+   "OpenAI k-sparse SAEs on GPT-4 (2024)"
+  ],
+  "summary": "An auxiliary network trained to reconstruct a model's internal activations through a wide, sparsely active hidden layer, so each hidden unit (a 'feature') tends to correspond to one human-interpretable concept.",
+  "why": "Individual neurons are polysemantic (fire for unrelated things); SAEs recover cleaner, concept-level units you can inspect and causally intervene on.",
+  "keyIdeas": [
+   "Superposition hypothesis: models pack more features than neurons into overlapping directions in activation space",
+   "SAE learns an overcomplete dictionary; a sparsity constraint (e.g. keep only the top-k latents) forces few features active per token",
+   "Trade-off between reconstruction error and sparsity; scaled to millions of latents on frontier models",
+   "Features can be clamped up or down to test whether they causally drive behavior"
+  ],
+  "links": [
+   {
+    "label": "Towards Monosemanticity (Anthropic)",
+    "url": "https://transformer-circuits.pub/2023/monosemantic-features"
+   },
+   {
+    "label": "SAEs find interpretable features (arXiv)",
+    "url": "https://arxiv.org/abs/2309.08600"
+   },
+   {
+    "label": "Scaling and evaluating SAEs (OpenAI, arXiv)",
+    "url": "https://arxiv.org/abs/2406.04093"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "circuit-tracing-attribution-graphs",
+  "group": "Interpretability & safety",
+  "name": "Circuit tracing / attribution graphs",
+  "examples": [
+   "Circuit Tracing methods paper (Anthropic, 2025)",
+   "On the Biology of a Large Language Model (Claude 3.5 Haiku)",
+   "circuit-tracer open-source library"
+  ],
+  "summary": "A method that builds a graph of which interpretable features influence which others, step by step, for a specific prompt, by tracing computation through an interpretable 'replacement model' of the network.",
+  "why": "Features alone say what a model represents; attribution graphs show how they combine into the mechanism that produces a given output, such as multi-step reasoning or planning.",
+  "keyIdeas": [
+   "Replace the MLP layers with a cross-layer transcoder trained to approximate them using sparse, interpretable features",
+   "For one prompt, compute direct linear effects between features, tokens and logits, then prune to a readable graph",
+   "Group related features into supernodes and validate hypotheses by intervening on features in the real model"
+  ],
+  "links": [
+   {
+    "label": "Circuit Tracing methods paper",
+    "url": "https://transformer-circuits.pub/2025/attribution-graphs/methods.html"
+   },
+   {
+    "label": "Biology of a LLM (case studies)",
+    "url": "https://transformer-circuits.pub/2025/attribution-graphs/biology.html"
+   },
+   {
+    "label": "circuit-tracer code",
+    "url": "https://github.com/decoderesearch/circuit-tracer"
+   }
+  ],
+  "year": "2025"
+ },
+ {
+  "id": "cot-faithfulness-monitorability",
+  "group": "Interpretability & safety",
+  "name": "Chain-of-thought faithfulness & monitorability",
+  "examples": [
+   "Turpin et al. 2023 (unfaithful CoT explanations)",
+   "Lanham et al. 2023 (measuring faithfulness)",
+   "Reasoning Models Don't Always Say What They Think (2025)",
+   "CoT Monitorability position paper (2025)"
+  ],
+  "summary": "Research on whether a model's written step-by-step reasoning reflects the computation that actually drove its answer, and whether that reasoning can be monitored to catch misbehavior.",
+  "why": "Reading a model's reasoning is a cheap oversight tool, but it only works if the reasoning is faithful and stays legible under training pressure.",
+  "keyIdeas": [
+   "Test faithfulness by inserting hints or biases into prompts and checking if the CoT admits using them; often it does not",
+   "Intervene on the CoT (add mistakes, truncate, paraphrase) to see how much the final answer depends on it",
+   "An LLM monitor reading the CoT can catch reward hacking better than watching actions alone",
+   "Optimizing hard against a CoT monitor can teach models to hide intent, so monitorability is fragile"
+  ],
+  "links": [
+   {
+    "label": "Reasoning models don't always say what they think",
+    "url": "https://arxiv.org/abs/2505.05410"
+   },
+   {
+    "label": "Monitoring reasoning models (OpenAI)",
+    "url": "https://arxiv.org/abs/2503.11926"
+   },
+   {
+    "label": "CoT Monitorability position paper",
+    "url": "https://arxiv.org/abs/2507.11473"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "steering-vectors",
+  "group": "Interpretability & safety",
+  "name": "Steering vectors / activation engineering",
+  "examples": [
+   "Activation Addition (ActAdd)",
+   "Contrastive Activation Addition (CAA)",
+   "Representation Engineering (RepE)",
+   "Inference-Time Intervention (ITI)"
+  ],
+  "summary": "Controlling a model's behavior at inference time by adding a vector to its internal activations during the forward pass, with no weight updates or prompt changes.",
+  "why": "Gives cheap, tunable control over high-level traits (sentiment, honesty, refusal) and is evidence that concepts are encoded as directions in activation space.",
+  "keyIdeas": [
+   "Compute a steering vector as the activation difference between contrasting inputs (e.g. 'Love' minus 'Hate')",
+   "CAA averages residual-stream differences over many positive/negative example pairs for a behavior",
+   "Add the vector at a chosen layer with a positive or negative coefficient to strengthen or suppress the behavior"
+  ],
+  "links": [
+   {
+    "label": "Activation engineering (ActAdd)",
+    "url": "https://arxiv.org/abs/2308.10248"
+   },
+   {
+    "label": "Contrastive Activation Addition",
+    "url": "https://arxiv.org/abs/2312.06681"
+   },
+   {
+    "label": "Representation Engineering",
+    "url": "https://arxiv.org/abs/2310.01405"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "machine-unlearning",
+  "group": "Interpretability & safety",
+  "name": "Machine unlearning",
+  "examples": [
+   "SISA training (Bourtoule et al. 2019)",
+   "Who's Harry Potter? (Eldan & Russinovich 2023)",
+   "WMDP benchmark and RMU (2024)",
+   "TOFU benchmark (2024)"
+  ],
+  "summary": "Techniques for removing the influence of specific training data or knowledge from a trained model without retraining it from scratch.",
+  "why": "Supports data deletion requests, copyright removal, and stripping hazardous knowledge (e.g. bioweapons) when full retraining is far too expensive.",
+  "keyIdeas": [
+   "Exact approach (SISA): shard training data so a deletion only requires retraining the affected shard",
+   "Approximate LLM unlearning: fine-tune toward generic replacement predictions for the target content",
+   "Representation methods (RMU) perturb internal activations on hazardous inputs while preserving general skills",
+   "Benchmarks like WMDP measure hazardous knowledge removed versus general ability kept"
+  ],
+  "links": [
+   {
+    "label": "Machine Unlearning (SISA)",
+    "url": "https://arxiv.org/abs/1912.03817"
+   },
+   {
+    "label": "Who's Harry Potter?",
+    "url": "https://arxiv.org/abs/2310.02238"
+   },
+   {
+    "label": "WMDP benchmark and RMU",
+    "url": "https://arxiv.org/abs/2403.03218"
+   }
+  ],
+  "year": "2019"
+ },
+ {
+  "id": "ai-output-watermarking",
+  "group": "Interpretability & safety",
+  "name": "Watermarking AI outputs",
+  "examples": [
+   "Green/red list LLM watermark (Kirchenbauer et al. 2023)",
+   "SynthID-Text (Google DeepMind)",
+   "Tree-Ring watermarks for diffusion images"
+  ],
+  "summary": "Embedding a signal into generated text or images that humans cannot notice but an algorithm can detect statistically, to identify content as machine-generated.",
+  "why": "Helps platforms and researchers identify synthetic content at scale, limiting misuse such as spam, disinformation, or passing off AI text as human.",
+  "keyIdeas": [
+   "Text: pseudorandomly split the vocabulary into 'green' tokens per step and softly boost them during sampling",
+   "Detection is a statistical test (p-value) on green-token frequency, without needing the model itself",
+   "SynthID-Text changes only the sampling procedure and was deployed in Gemini at production scale",
+   "Images: Tree-Ring embeds a Fourier-space pattern in the initial diffusion noise, recovered by inverting sampling"
+  ],
+  "links": [
+   {
+    "label": "A Watermark for LLMs",
+    "url": "https://arxiv.org/abs/2301.10226"
+   },
+   {
+    "label": "SynthID-Text (Nature)",
+    "url": "https://www.nature.com/articles/s41586-024-08025-4"
+   },
+   {
+    "label": "Tree-Ring Watermarks",
+    "url": "https://arxiv.org/abs/2305.20030"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "protein-design-diffusion",
+  "group": "AI for science",
+  "name": "Protein design with diffusion",
+  "examples": [
+   "RFdiffusion (Baker lab)",
+   "FrameDiff (SE(3) diffusion)",
+   "Chroma (Generate Biomedicines)"
+  ],
+  "summary": "Generating new protein structures that do not exist in nature by applying diffusion models, which learn to turn random noise into a plausible 3D protein backbone, optionally conditioned on a design goal.",
+  "why": "Lets scientists design custom binders, enzymes and symmetric assemblies computationally, replacing much slow trial-and-error lab work.",
+  "keyIdeas": [
+   "Represent each residue as a rigid frame (position + orientation) and diffuse over these frames in 3D",
+   "RFdiffusion fine-tunes the RoseTTAFold structure predictor as the denoiser",
+   "Condition generation on targets, motifs or symmetry to design binders and scaffolds",
+   "Backbones get sequences from a separate tool (e.g. ProteinMPNN) and are filtered before lab testing"
+  ],
+  "links": [
+   {
+    "label": "RFdiffusion (Nature)",
+    "url": "https://www.nature.com/articles/s41586-023-06415-8"
+   },
+   {
+    "label": "RFdiffusion code",
+    "url": "https://github.com/RosettaCommons/RFdiffusion"
+   },
+   {
+    "label": "FrameDiff (arXiv)",
+    "url": "https://arxiv.org/abs/2302.02277"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "ai-materials-discovery",
+  "group": "AI for science",
+  "name": "AI for materials discovery",
+  "examples": [
+   "GNoME (Google DeepMind)",
+   "MatterGen (Microsoft)",
+   "MACE-MP-0 foundation potential"
+  ],
+  "summary": "Using machine learning to predict which new inorganic crystals are stable and to generate candidate materials with target properties, far faster than physics simulation or experiment alone.",
+  "why": "Batteries, chips and solar cells depend on new crystals, and each stable one used to cost months of experiments or expensive quantum calculations to find.",
+  "keyIdeas": [
+   "Graph neural networks over atoms and bonds predict stability (energy relative to the convex hull)",
+   "Active learning loop: model proposes candidates, DFT calculations verify them, results retrain the model",
+   "Generative diffusion (MatterGen) refines atom types, coordinates and lattice, steerable toward desired properties"
+  ],
+  "links": [
+   {
+    "label": "GNoME announcement (DeepMind)",
+    "url": "https://deepmind.google/discover/blog/millions-of-new-materials-discovered-with-deep-learning/"
+   },
+   {
+    "label": "GNoME paper (Nature)",
+    "url": "https://www.nature.com/articles/s41586-023-06735-9"
+   },
+   {
+    "label": "MatterGen (arXiv)",
+    "url": "https://arxiv.org/abs/2312.03687"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "weather-climate-foundation-models",
+  "group": "AI for science",
+  "name": "Weather / climate foundation models",
+  "examples": [
+   "GraphCast (Google DeepMind)",
+   "GenCast (probabilistic ensembles)",
+   "Pangu-Weather (Huawei)",
+   "Aurora (Microsoft)"
+  ],
+  "summary": "Neural networks trained on decades of historical reanalysis data that forecast the global atmosphere (and related Earth systems) directly, instead of numerically solving physics equations.",
+  "why": "They can beat top operational physics-based forecasts on most metrics; GraphCast makes a 10-day forecast in under a minute on one TPU.",
+  "keyIdeas": [
+   "Learn a step function from the current global state to the next (e.g. 6 or 12 hours ahead), rolled out autoregressively",
+   "GraphCast uses a graph neural network on a mesh; GenCast uses diffusion to sample ensembles that capture uncertainty",
+   "Foundation models like Aurora pretrain on diverse data, then fine-tune for air quality, ocean waves or cyclones"
+  ],
+  "links": [
+   {
+    "label": "GraphCast (arXiv)",
+    "url": "https://arxiv.org/abs/2212.12794"
+   },
+   {
+    "label": "GenCast (arXiv)",
+    "url": "https://arxiv.org/abs/2312.15796"
+   },
+   {
+    "label": "Aurora (arXiv)",
+    "url": "https://arxiv.org/abs/2405.13063"
+   }
+  ],
+  "year": "2022"
+ },
+ {
+  "id": "query-rewriting",
+  "group": "Query understanding",
+  "name": "Query rewriting and decomposition",
+  "examples": [
+   "Rewrite-Retrieve-Read",
+   "Self-Ask",
+   "LLM prompt-based rewriter"
+  ],
+  "summary": "Transform the raw user query into one or more queries better suited to the retriever: rewriting fixes phrasing and intent, decomposition splits a compound request into sub-questions answered separately.",
+  "why": "Users type vague or compound requests; the retriever only sees what you send it, so a better query often beats a better index.",
+  "keyIdeas": [
+   "Rewrite-Retrieve-Read: LLM rewrites the query, then retrieve, then read; a small rewriter can be RL-tuned on reader feedback",
+   "Decomposition: answer sub-questions first (Self-Ask asks and answers follow-ups, optionally via a search engine)",
+   "Tradeoff: an extra LLM call adds latency and can drift from user intent; keep the original query as a fallback"
+  ],
+  "links": [
+   {
+    "label": "Query Rewriting for RAG (Ma et al.)",
+    "url": "https://arxiv.org/abs/2305.14283"
+   },
+   {
+    "label": "Self-Ask (Press et al.)",
+    "url": "https://arxiv.org/abs/2210.03350"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "llm-query-parsing",
+  "group": "Query understanding",
+  "name": "LLM-based query parsing (natural language to structured filters)",
+  "examples": [
+   "LangChain SelfQueryRetriever (Elasticsearch, MongoDB stores)",
+   "JSON schema / structured outputs"
+  ],
+  "summary": "An LLM reads the natural-language query and emits a structured query: metadata filters (practice_area=tax, city=NYC, years_experience>=5) plus a residual semantic text to embed or match.",
+  "why": "Hard constraints like location or years of experience are matched reliably by filters, not by embedding similarity.",
+  "keyIdeas": [
+   "Give the LLM the filterable fields, types and allowed values; constrain output to a schema",
+   "A translator converts the parsed filter into the target store's syntax (Elasticsearch bool, Qdrant must, Mongo $vectorSearch filter)",
+   "Validate output: unknown fields or values should fall back to soft matching, not silently drop results"
+  ],
+  "links": [
+   {
+    "label": "Elastic: self-querying retrievers",
+    "url": "https://www.elastic.co/search-labs/blog/self-querying-retrievers"
+   },
+   {
+    "label": "MongoDB: self-query retrieval",
+    "url": "https://www.mongodb.com/docs/atlas/ai-integrations/langchain/self-query-retrieval/"
+   }
+  ]
+ },
+ {
+  "id": "hyde",
+  "group": "Query understanding",
+  "name": "HyDE (Hypothetical Document Embeddings)",
+  "examples": [
+   "InstructGPT + Contriever (original paper)"
+  ],
+  "summary": "An LLM writes a hypothetical document that would answer the query; that text is embedded and used to find real documents near it, instead of embedding the short query directly.",
+  "why": "Short queries and long documents live in different parts of embedding space; a fake answer looks more like a real document.",
+  "keyIdeas": [
+   "Zero-shot: no relevance labels needed; the generated document may contain errors, the encoder's dense bottleneck filters them out",
+   "Cost: one LLM generation per query before retrieval (latency and spend)",
+   "Risk: hallucinated specifics can pull retrieval toward wrong documents; often combined with the original query"
+  ],
+  "links": [
+   {
+    "label": "HyDE paper (Gao et al.)",
+    "url": "https://arxiv.org/abs/2212.10496"
+   }
+  ],
+  "year": "2022"
+ },
+ {
+  "id": "query-expansion",
+  "group": "Query understanding",
+  "name": "Query expansion (synonyms)",
+  "examples": [
+   "Elasticsearch synonym_graph filter",
+   "Query2doc",
+   "Domain synonym dictionaries"
+  ],
+  "summary": "Add related terms to the query so lexical retrieval matches documents that use different words for the same thing, e.g. \"tax attorney\" also matching \"tax lawyer\" or \"tax counsel\".",
+  "why": "BM25 only matches the query's analyzed terms (after lowercasing and stemming), so vocabulary mismatch silently drops relevant results.",
+  "keyIdeas": [
+   "Equivalent rules (a, b, c) are interchangeable; explicit rules (a => b) are one-way replacements",
+   "Prefer search-time synonyms (synonym_graph handles multi-word terms) so sets can change without reindexing",
+   "LLM expansion (Query2doc): append a generated pseudo-document to the query; improved BM25 3 to 15% on MS MARCO/TREC DL"
+  ],
+  "links": [
+   {
+    "label": "Elastic: search with synonyms",
+    "url": "https://www.elastic.co/docs/solutions/search/full-text/search-with-synonyms"
+   },
+   {
+    "label": "Query2doc (Wang et al.)",
+    "url": "https://arxiv.org/abs/2303.07678"
+   }
+  ]
+ },
+ {
+  "id": "asymmetric-embeddings",
+  "group": "Query understanding",
+  "name": "Asymmetric embeddings (query vs document input type)",
+  "examples": [
+   "Voyage input_type query/document",
+   "Cohere search_query/search_document"
+  ],
+  "summary": "Embedding APIs let you mark text as a query or a document so the model encodes each role differently; a short query and a long profile are not symmetric texts.",
+  "why": "Queries and documents play different roles; telling the model which is which is a one-parameter change to retrieval.",
+  "keyIdeas": [
+   "Voyage: input_type None, \"query\" or \"document\"; it prepends a prompt such as \"Represent the query for retrieving supporting documents: \"",
+   "Cohere Embed v3+: input_type is required: search_document when indexing, search_query at query time",
+   "Rule: index with the document type, embed user queries with the query type, same model for both"
+  ],
+  "links": [
+   {
+    "label": "Voyage AI: embeddings",
+    "url": "https://docs.voyageai.com/docs/embeddings"
+   },
+   {
+    "label": "Cohere: Embed API",
+    "url": "https://docs.cohere.com/reference/embed"
+   }
+  ]
+ },
+ {
+  "id": "hybrid-search",
+  "group": "Retrieval",
+  "name": "Hybrid search (BM25 + dense vectors)",
+  "examples": [
+   "Weaviate hybrid (alpha)",
+   "OpenSearch normalization processor",
+   "Elasticsearch RRF retriever"
+  ],
+  "summary": "Run a lexical (BM25) search and a vector search for the same query and fuse the two result lists into one ranking.",
+  "why": "BM25 nails exact terms (names, bar IDs, rare skills); vectors catch paraphrase. Each covers the other's misses.",
+  "keyIdeas": [
+   "Rank-based fusion (RRF) ignores raw scores; score-based fusion normalizes them first (min_max, l2, z_score) then combines",
+   "Weaviate alpha: 0 = keyword only, 1 = vector only (server default 0.75); relativeScoreFusion is default since v1.24",
+   "BM25 and cosine scores are on different scales, so never add them raw"
+  ],
+  "links": [
+   {
+    "label": "Weaviate: hybrid search",
+    "url": "https://docs.weaviate.io/weaviate/concepts/search/hybrid-search"
+   },
+   {
+    "label": "OpenSearch: normalization processor",
+    "url": "https://docs.opensearch.org/latest/search-plugins/search-pipelines/normalization-processor/"
+   }
+  ]
+ },
+ {
+  "id": "rrf",
+  "group": "Retrieval",
+  "name": "Reciprocal Rank Fusion (RRF)",
+  "examples": [
+   "Elasticsearch rrf retriever",
+   "Weaviate rankedFusion",
+   "RAG-Fusion"
+  ],
+  "summary": "Merge several ranked lists by summing, for each document, 1/(k + rank) over every list it appears in; uses only ranks, so no score calibration is needed.",
+  "why": "The simplest robust way to combine BM25, vector and multi-query results whose scores are not comparable.",
+  "keyIdeas": [
+   "RRF score(d) = sum over lists r of 1/(k + r(d)); k = 60 was found near-optimal and is Elasticsearch's default rank_constant",
+   "k damps the influence of top ranks from a single outlier system",
+   "Original paper: RRF beat Condorcet fusion and individual learning-to-rank runs on TREC and LETOR 3"
+  ],
+  "links": [
+   {
+    "label": "RRF paper (Cormack et al., SIGIR 2009)",
+    "url": "https://cormack.uwaterloo.ca/cormacksigir09-rrf.pdf"
+   },
+   {
+    "label": "Elasticsearch: RRF",
+    "url": "https://www.elastic.co/docs/reference/elasticsearch/rest-apis/reciprocal-rank-fusion"
+   }
+  ],
+  "year": "2009"
+ },
+ {
+  "id": "pre-post-filtering",
+  "group": "Retrieval",
+  "name": "Pre-filtering vs post-filtering with metadata",
+  "examples": [
+   "Weaviate allow-list + ACORN",
+   "Flat-search cutoff",
+   "Elasticsearch kNN filter"
+  ],
+  "summary": "Pre-filtering restricts the candidate set by metadata before or during vector search; post-filtering runs vector search first and then drops non-matching hits.",
+  "why": "With strict filters like city=NYC, post-filtering can return few or zero results even though matches exist.",
+  "keyIdeas": [
+   "Post-filter: simple, but result count is unpredictable because the filter applies to an already truncated top-k",
+   "Pre-filter: inverted index builds an allow-list passed to HNSW; restrictive filters make graph traversal slow",
+   "Mitigations: filter-aware HNSW (ACORN), or switch to brute-force over the matching subset when it is small"
+  ],
+  "links": [
+   {
+    "label": "Weaviate: filtering",
+    "url": "https://docs.weaviate.io/weaviate/concepts/filtering"
+   }
+  ]
+ },
+ {
+  "id": "multi-stage-retrieval",
+  "group": "Retrieval",
+  "name": "Multi-stage retrieval (retrieve, then rerank)",
+  "examples": [
+   "Vespa first/second/global phase",
+   "Bi-encoder + cross-encoder",
+   "BM25 + LambdaMART"
+  ],
+  "summary": "A cheap first stage pulls a high-recall candidate pool (hundreds to thousands), and progressively more expensive models rescore smaller subsets for precision.",
+  "why": "Expensive scorers cannot run over the whole corpus; staging gives near-best quality at bounded latency and cost.",
+  "keyIdeas": [
+   "Stage 1 optimizes recall: anything missed here can never be recovered by the reranker",
+   "Vespa: first-phase scores every hit; second-phase reranks top 100 per node; global-phase reranks top 100 overall (fits cross-encoders)",
+   "Tune candidate pool size against reranker latency"
+  ],
+  "links": [
+   {
+    "label": "Vespa: phased ranking",
+    "url": "https://docs.vespa.ai/en/phased-ranking.html"
+   },
+   {
+    "label": "SBERT: retrieve and re-rank",
+    "url": "https://sbert.net/examples/sentence_transformer/applications/retrieve_rerank/README.html"
+   }
+  ]
+ },
+ {
+  "id": "multi-query-retrieval",
+  "group": "Retrieval",
+  "name": "Multi-query retrieval",
+  "examples": [
+   "LangChain MultiQueryRetriever",
+   "RAG-Fusion"
+  ],
+  "summary": "An LLM generates several alternative phrasings of the query, each is retrieved independently, and the result lists are merged (deduplicated union or RRF).",
+  "why": "One phrasing captures one region of embedding space; several rewrites raise recall for ambiguous queries.",
+  "keyIdeas": [
+   "MultiQueryRetriever returns the unique union of documents across generated queries",
+   "RAG-Fusion fuses the per-query lists with reciprocal rank fusion",
+   "Tradeoff: N times the retrieval calls plus an LLM call; off-topic rewrites can add noise"
+  ],
+  "links": [
+   {
+    "label": "LangChain: MultiQueryRetriever",
+    "url": "https://reference.langchain.com/python/langchain-classic/retrievers/multi_query/MultiQueryRetriever"
+   },
+   {
+    "label": "RAG-Fusion (Rackauckas)",
+    "url": "https://arxiv.org/abs/2402.03367"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "cross-encoder-rerankers",
+  "group": "Re-ranking",
+  "name": "Cross-encoder rerankers",
+  "examples": [
+   "Voyage rerank",
+   "BAAI bge-reranker-v2-m3",
+   "monoBERT"
+  ],
+  "summary": "A transformer reads the query and one candidate together and outputs a relevance score; it produces no embedding, so it is applied only to a shortlist from first-stage retrieval.",
+  "why": "Joint attention over query and document is markedly more accurate than comparing separately computed vectors.",
+  "keyIdeas": [
+   "Bi-encoder: embed once, compare fast. Cross-encoder: one forward pass per (query, doc) pair, cannot precompute",
+   "Typical use: rerank the top 50 to 200 candidates from hybrid retrieval",
+   "bge-reranker scores are unnormalized logits; apply sigmoid to map to [0, 1]"
+  ],
+  "links": [
+   {
+    "label": "Voyage AI: rerankers",
+    "url": "https://docs.voyageai.com/docs/reranker"
+   },
+   {
+    "label": "SBERT: cross-encoders",
+    "url": "https://sbert.net/examples/cross_encoder/applications/README.html"
+   },
+   {
+    "label": "Passage Re-ranking with BERT",
+    "url": "https://arxiv.org/abs/1901.04085"
+   }
+  ],
+  "year": "2019"
+ },
+ {
+  "id": "llm-reranker",
+  "group": "Re-ranking",
+  "name": "LLM as reranker (pointwise, pairwise, listwise)",
+  "examples": [
+   "RankGPT",
+   "Pairwise Ranking Prompting (PRP)"
+  ],
+  "summary": "Prompt an LLM to judge relevance: pointwise (score each doc alone), pairwise (which of two is better), or listwise (output a permutation of a list of docs).",
+  "why": "LLMs can apply nuanced, instruction-specified criteria (\"prefers Big Four background\") that a fixed reranker cannot.",
+  "keyIdeas": [
+   "RankGPT listwise: label passages [1]..[n], ask for an order like [2] > [3] > [1]; sliding window (size 20, step 10) back to front",
+   "PRP pairwise: an easier task for the LLM; all-pairs is O(n^2), efficient variants reach linear complexity",
+   "Costly and slow: use only on a small top-k after cheaper rerankers"
+  ],
+  "links": [
+   {
+    "label": "RankGPT (Sun et al.)",
+    "url": "https://arxiv.org/abs/2304.09542"
+   },
+   {
+    "label": "PRP (Qin et al.)",
+    "url": "https://arxiv.org/abs/2306.17563"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "learning-to-rank",
+  "group": "Re-ranking",
+  "name": "Learning to rank (LambdaMART)",
+  "examples": [
+   "LightGBM LGBMRanker",
+   "XGBoost XGBRanker",
+   "Elasticsearch LTR"
+  ],
+  "summary": "Train a model on judged (query, document, relevance) data to combine many ranking features into one score; LambdaMART, gradient-boosted trees with LambdaRank gradients, is the standard choice.",
+  "why": "Replaces hand-tuned score formulas with weights learned from clicks or labels, and runs fast at inference.",
+  "keyIdeas": [
+   "LambdaMART: boosted-tree version of LambdaRank; pairwise gradients weighted by how much swapping two docs changes NDCG",
+   "LGBMRanker: default objective lambdarank, metric ndcg; group gives the number of rows per query",
+   "Needs a judgment list (graded 0 to 4 labels or click-derived) and features computed at serving time"
+  ],
+  "links": [
+   {
+    "label": "LightGBM: LGBMRanker",
+    "url": "https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.LGBMRanker.html"
+   },
+   {
+    "label": "Elasticsearch: learning to rank",
+    "url": "https://www.elastic.co/docs/solutions/search/ranking/learning-to-rank-ltr"
+   }
+  ],
+  "year": "2010"
+ },
+ {
+  "id": "ranking-features",
+  "group": "Re-ranking",
+  "name": "Feature engineering for ranking",
+  "examples": [
+   "BM25 on title field",
+   "Title/degree exact match",
+   "Years-of-experience gap",
+   "Recency decay"
+  ],
+  "summary": "Design the signals a ranker scores: query-document features (title match, skill overlap, BM25 per field), document features (years of experience, seniority, profile freshness) and query features.",
+  "why": "A ranker can only be as good as its features; domain signals often matter more than model choice.",
+  "keyIdeas": [
+   "Three types: document (years_experience), query (number of terms), query-document (BM25 on title, degree matches required degree)",
+   "Encode gaps, not raw values: max(0, required_years - candidate_years), distance from target location",
+   "Recency: decay functions (gauss, exp, linear) with origin, scale, offset, decay (score 0.5 at scale by default)"
+  ],
+  "links": [
+   {
+    "label": "Elasticsearch: LTR features",
+    "url": "https://www.elastic.co/docs/solutions/search/ranking/learning-to-rank-ltr"
+   },
+   {
+    "label": "Elasticsearch: decay functions",
+    "url": "https://www.elastic.co/docs/reference/query-languages/query-dsl/query-dsl-function-score-query"
+   },
+   {
+    "label": "LinkedIn talent search ranking",
+    "url": "https://arxiv.org/abs/1809.06473"
+   }
+  ]
+ },
+ {
+  "id": "constraint-ranking",
+  "group": "Re-ranking",
+  "name": "Constraint satisfaction: hard filters, then soft scoring",
+  "examples": [
+   "Elasticsearch bool filter + should",
+   "Pre-filtered vector search",
+   "Weighted soft-criteria score"
+  ],
+  "summary": "Split query criteria into must-haves applied as non-scoring filters (licensed attorney, NYC) and nice-to-haves that add to the score (tax specialty, 5+ years, big-firm background).",
+  "why": "Users expect hard requirements never violated, while soft preferences should reorder rather than exclude candidates.",
+  "keyIdeas": [
+   "Elasticsearch bool: filter (must match) and must_not (must not match) add no score; must/should scores are summed",
+   "Filters skip scoring and frequently used ones are cached, so put hard constraints in filter context",
+   "Over-strict filters yield zero results: relax hard constraints to soft ones in order and tell the user"
+  ],
+  "links": [
+   {
+    "label": "Elasticsearch: bool query",
+    "url": "https://www.elastic.co/docs/reference/query-languages/query-dsl/query-dsl-bool-query"
+   },
+   {
+    "label": "Elasticsearch: query vs filter context",
+    "url": "https://www.elastic.co/docs/reference/query-languages/query-dsl/query-filter-context"
+   }
+  ]
+ },
+ {
+  "id": "entity-normalization",
+  "group": "Data handling",
+  "name": "Entity normalization (job titles, schools, companies)",
+  "examples": [
+   "Alias/lexicon tables",
+   "O*NET-SOC or ESCO occupation codes",
+   "dedupe (Python)",
+   "LLM canonicalization to a fixed ID list"
+  ],
+  "summary": "Mapping the many surface forms of one entity (\"SWE II\", \"Software Engineer 2\"; \"MIT\", \"Massachusetts Institute of Technology\") to a single canonical ID before indexing and filtering.",
+  "why": "Filters and matches on raw strings miss variants, so recall on title, school and company constraints silently drops.",
+  "keyIdeas": [
+   "Standardize first (case, punctuation, suffixes like Inc/LLC, abbreviations), then map to a canonical ID via alias tables",
+   "Map titles to a taxonomy (O*NET-SOC, ESCO) plus a separate seniority field instead of exact title strings",
+   "Fellegi-Sunter linkage: score pairs, auto-accept above an upper threshold, reject below a lower one, review the middle",
+   "Apply the same normalizer to queries and profiles, and keep the raw string for display and debugging"
+  ],
+  "links": [
+   {
+    "label": "Record linkage (Wikipedia)",
+    "url": "https://en.wikipedia.org/wiki/Record_linkage"
+   },
+   {
+    "label": "O*NET-SOC taxonomy",
+    "url": "https://www.onetcenter.org/taxonomy.html"
+   },
+   {
+    "label": "dedupe docs",
+    "url": "https://docs.dedupe.io/en/latest/"
+   }
+  ],
+  "year": "1969"
+ },
+ {
+  "id": "fuzzy-matching",
+  "group": "Data handling",
+  "name": "Fuzzy matching / string similarity",
+  "examples": [
+   "RapidFuzz (ratio, partial_ratio, token_set_ratio)",
+   "Levenshtein / Indel distance",
+   "Jaro-Winkler"
+  ],
+  "summary": "Scoring how similar two strings are despite typos, reordering or extra words, so near-duplicates like \"Google LLC\" and \"google\" can be matched to the same entity.",
+  "why": "User queries and profile fields are noisy; exact matching misses typos, word order changes and partial names.",
+  "keyIdeas": [
+   "Levenshtein counts insert/delete/substitute edits; RapidFuzz fuzz.ratio is a normalized Indel (insert/delete only) similarity 0-100",
+   "token_sort_ratio sorts words first; token_set_ratio returns 100 when one word set is a subset of the other",
+   "partial_ratio scores the best alignment of the shorter string inside the longer one; prone to false positives on short strings",
+   "Normalize (default_process) and use score_cutoff and process.extractOne/cdist for fast one-to-many matching"
+  ],
+  "links": [
+   {
+    "label": "RapidFuzz fuzz docs",
+    "url": "https://rapidfuzz.github.io/RapidFuzz/Usage/fuzz.html"
+   },
+   {
+    "label": "RapidFuzz process docs",
+    "url": "https://rapidfuzz.github.io/RapidFuzz/Usage/process.html"
+   },
+   {
+    "label": "Levenshtein distance",
+    "url": "https://en.wikipedia.org/wiki/Levenshtein_distance"
+   }
+  ],
+  "year": "1965"
+ },
+ {
+  "id": "temporal-reasoning",
+  "group": "Data handling",
+  "name": "Temporal reasoning (years of experience, current roles)",
+  "examples": [
+   "Interval merging",
+   "Allen's interval algebra"
+  ],
+  "summary": "Deriving facts like total years of experience, tenure at a company, or \"currently at X\" from each role's start and end years.",
+  "why": "Queries such as \"5+ years in ML\" or \"currently at a startup\" are wrong if overlapping roles, gaps or open-ended dates are mishandled.",
+  "keyIdeas": [
+   "A 'present' end date usually means a current role; a missing one may just be unknown, so pick a convention and flag both",
+   "Merge overlapping intervals before summing so concurrent roles are not double counted; gaps are not experience",
+   "Year-only granularity is ambiguous: 2019 to 2020 can mean 1 month or 2 years, so define a convention and allow tolerance",
+   "Allen's 13 interval relations (before, overlaps, during, etc.) formalize constraints like 'worked at A before B'"
+  ],
+  "links": [
+   {
+    "label": "Allen's interval algebra",
+    "url": "https://en.wikipedia.org/wiki/Allen%27s_interval_algebra"
+   }
+  ],
+  "year": "1983"
+ },
+ {
+  "id": "ranking-metrics",
+  "group": "Evaluation",
+  "name": "Ranking metrics: precision@k, recall@k, NDCG, MRR",
+  "examples": [
+   "ranx",
+   "trec_eval",
+   "scikit-learn ndcg_score"
+  ],
+  "summary": "Standard offline measures of how well a ranked list places relevant results near the top, computed per query against relevance labels (qrels) and averaged.",
+  "why": "You cannot tune retrieval or reranking without a number that rewards putting the right candidates in the top k.",
+  "keyIdeas": [
+   "P@k = relevant in top k / k; R@k = relevant in top k / total relevant R",
+   "DCG@k = sum over i=1..k of rel_i / log2(i+1) (variant: (2^rel_i - 1) numerator); NDCG@k = DCG@k / ideal DCG@k",
+   "RR = 1 / rank of first relevant result; MRR is its mean over queries",
+   "NDCG uses graded labels; MRR suits single-answer lookups; recall@k matters most for first-stage retrieval"
+  ],
+  "links": [
+   {
+    "label": "ranx metric definitions",
+    "url": "https://amenra.github.io/ranx/metrics/"
+   },
+   {
+    "label": "Discounted cumulative gain",
+    "url": "https://en.wikipedia.org/wiki/Discounted_cumulative_gain"
+   },
+   {
+    "label": "Mean reciprocal rank",
+    "url": "https://en.wikipedia.org/wiki/Mean_reciprocal_rank"
+   }
+  ],
+  "year": "2002"
+ },
+ {
+  "id": "llm-as-judge",
+  "group": "Evaluation",
+  "name": "LLM-as-judge for relevance labeling",
+  "examples": [
+   "Graded relevance prompts (e.g. 0-3 scale)",
+   "Pairwise preference judging",
+   "Agreement vs human gold labels"
+  ],
+  "summary": "Using a strong LLM, given the query and a candidate, to produce relevance labels at scale instead of (or alongside) human annotators.",
+  "why": "Labels for every query-candidate pair are too expensive to get from humans, and metrics like NDCG need them.",
+  "keyIdeas": [
+   "Known biases: position, verbosity, self-enhancement; judge both orders and count a win only if consistent, else a tie",
+   "Validate against a small human gold set and report agreement before trusting the labels",
+   "Bing tuned prompts to agree with first-party searcher feedback; prompt wording changed accuracy noticeably",
+   "Avoid judging with the same model and prompt used by the reranker, or the eval rewards its own preferences"
+  ],
+  "links": [
+   {
+    "label": "Zheng et al. 2023 (LLM-as-a-judge)",
+    "url": "https://arxiv.org/abs/2306.05685"
+   },
+   {
+    "label": "Thomas et al. 2023 (Bing relevance labels)",
+    "url": "https://arxiv.org/abs/2309.10621"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "eval-overfitting",
+  "group": "Evaluation",
+  "name": "Avoiding overfitting to a public query set / robustness to distribution shift",
+  "examples": [
+   "Held-out private query set",
+   "BEIR-style multi-domain evaluation",
+   "Paraphrased and adversarial queries"
+  ],
+  "summary": "Making sure gains measured on a fixed, repeatedly used query set reflect real improvement and still hold on new or differently distributed queries.",
+  "why": "Tuning prompts and thresholds against the same visible queries inflates scores that then drop on real user queries.",
+  "keyIdeas": [
+   "Keep a hidden test split and look at it rarely; tune only on a dev split",
+   "Recht et al.: fresh ImageNet/CIFAR test sets cost models 3-15% accuracy, due to harder data rather than adaptivity",
+   "BEIR: models strong in-domain often generalize poorly zero-shot; BM25 stays a robust baseline",
+   "Probe shift with new query templates, rare titles and schools, typos, and conflicting constraints"
+  ],
+  "links": [
+   {
+    "label": "BEIR (Thakur et al. 2021)",
+    "url": "https://arxiv.org/abs/2104.08663"
+   },
+   {
+    "label": "Do ImageNet classifiers generalize?",
+    "url": "https://arxiv.org/abs/1902.10811"
+   }
+  ],
+  "year": "2021"
+ },
+ {
+  "id": "ablation-studies",
+  "group": "Evaluation",
+  "name": "Ablation studies (what each pipeline stage adds)",
+  "examples": [
+   "ranx.compare with paired significance tests",
+   "Leave-one-stage-out runs"
+  ],
+  "summary": "Removing or swapping one pipeline component at a time (query parsing, normalization, fuzzy match, reranker) and measuring the change in metrics on the same queries.",
+  "why": "Shows which stages earn their latency and cost, and catches stages that add complexity but no measurable gain.",
+  "keyIdeas": [
+   "Change one component at a time against a fixed baseline, same queries, labels and metrics",
+   "Report per-stage deltas (NDCG@10, recall@k) plus latency and cost, not just the final score",
+   "Use paired tests over queries (ranx: paired t-test or Fisher randomization) since small deltas are often noise",
+   "Stages interact: removing A may matter only when B is present, so also test key combinations"
+  ],
+  "links": [
+   {
+    "label": "Ablation (artificial intelligence)",
+    "url": "https://en.wikipedia.org/wiki/Ablation_(artificial_intelligence)"
+   },
+   {
+    "label": "ranx compare and stat tests",
+    "url": "https://amenra.github.io/ranx/compare/"
+   }
+  ]
+ },
+ {
+  "id": "llm-rerank-cost",
+  "group": "Engineering",
+  "name": "Latency and cost tradeoffs for LLM reranking",
+  "examples": [
+   "Cross-encoder (monoBERT)",
+   "RankGPT listwise sliding window",
+   "Pairwise Ranking Prompting (PRP)",
+   "Distilled small reranker"
+  ],
+  "summary": "LLM rerankers improve ordering of a retrieved shortlist but cost tokens and seconds per query, so the design is about how many candidates, how many calls, and which model.",
+  "why": "Reranking every candidate with a large model can dominate both p95 latency and per-query spend.",
+  "keyIdeas": [
+   "Retrieve cheaply (BM25/vector), rerank only the top N; cost grows roughly with N times profile length",
+   "Call count: pointwise O(N), all-pairs O(N^2), PRP with sorting O(N log N), listwise sliding windows about N/step",
+   "RankGPT reranked BM25 top-100 with window 20, step 10; a cheap model then GPT-4 on top-30 cut cost to about 1/5",
+   "Distill: RankGPT's 440M student beat a 3B supervised reranker on BEIR at a fraction of the cost"
+  ],
+  "links": [
+   {
+    "label": "RankGPT (Sun et al. 2023)",
+    "url": "https://arxiv.org/abs/2304.09542"
+   },
+   {
+    "label": "Pairwise Ranking Prompting",
+    "url": "https://arxiv.org/abs/2306.17563"
+   },
+   {
+    "label": "Passage re-ranking with BERT",
+    "url": "https://arxiv.org/abs/1901.04085"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "async-batching-caching",
+  "group": "Engineering",
+  "name": "Async batching, caching, rate-limit handling",
+  "examples": [
+   "asyncio with a semaphore",
+   "Message Batches API",
+   "Prompt caching",
+   "Exponential backoff with jitter"
+  ],
+  "summary": "Running many LLM calls concurrently within provider limits, reusing repeated work, and retrying throttled calls safely.",
+  "why": "Labeling or reranking thousands of candidates hits RPM/token limits fast; naive retries cause thundering herds and wasted spend.",
+  "keyIdeas": [
+   "Limits cap requests and tokens per minute (RPM, TPM; Anthropic ITPM/OTPM) and some per day (RPD, TPD); exceeding one returns 429",
+   "Honor Retry-After when present, else exponential backoff with jitter (AWS Full Jitter: sleep random(0, min(cap, base*2^n)))",
+   "Bound concurrency with a semaphore; cache results keyed by (model, prompt, input hash) and cache shared prompt prefixes",
+   "Offline jobs: Anthropic Message Batches cost 50% less, most finish within 1 hour, max 24 hours"
+  ],
+  "links": [
+   {
+    "label": "AWS: Exponential backoff and jitter",
+    "url": "https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/"
+   },
+   {
+    "label": "OpenAI rate limits guide",
+    "url": "https://developers.openai.com/api/docs/guides/rate-limits"
+   },
+   {
+    "label": "Claude batch processing",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/batch-processing"
+   }
+  ]
+ }
+]

@@ -1,0 +1,2255 @@
+[
+ {
+  "id": "c-and-rust",
+  "group": "Foundations",
+  "name": "C and Rust (ownership, unsafe)",
+  "examples": [
+   "malloc / free",
+   "Box<T>, &T, &mut T",
+   "unsafe { }",
+   "raw pointers (*const T, *mut T)"
+  ],
+  "summary": "C gives direct control of memory with manual allocation and freeing. Rust offers similar control but tracks ownership and borrowing at compile time; unsafe blocks opt into a few extra operations the compiler cannot check.",
+  "why": "Systems code needs C-level control of layout and allocation; Rust keeps that control while ruling out use-after-free and data races in safe code.",
+  "keyIdeas": [
+   "Rust ownership: each value has one owner at a time, and the value is dropped when its owner goes out of scope",
+   "Borrowing: at any time, either one mutable reference or any number of immutable references",
+   "unsafe unlocks a few extra actions (the Rust Book's five superpowers, e.g. dereferencing a raw pointer); it does not turn off the borrow checker",
+   "Idiom: wrap small unsafe blocks in safe APIs whose invariants you document and uphold"
+  ],
+  "links": [
+   {
+    "label": "Rust Book: What is ownership?",
+    "url": "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html"
+   },
+   {
+    "label": "Rust Book: Unsafe Rust",
+    "url": "https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html"
+   },
+   {
+    "label": "The Rustonomicon",
+    "url": "https://doc.rust-lang.org/nomicon/"
+   }
+  ]
+ },
+ {
+  "id": "pointers-layout-alignment",
+  "group": "Foundations",
+  "name": "Pointers, memory layout, struct padding and alignment",
+  "examples": [
+   "alignof / _Alignof",
+   "offsetof",
+   "#[repr(C)]",
+   "pahole"
+  ],
+  "summary": "A pointer is an address; each type has an alignment its address must be a multiple of. Compilers insert padding between struct fields and at the end so every field stays aligned and arrays of the struct stay aligned.",
+  "why": "Padding wastes memory and cache space, and layout matters when talking to hardware, files or other languages (FFI).",
+  "keyIdeas": [
+   "On 64-bit targets, scalars and pointers are usually self-aligned: an 8-byte pointer sits on an 8-byte boundary",
+   "A struct's size is a multiple of its alignment, so trailing padding keeps array elements aligned",
+   "Example (64-bit): {char; ptr; short} is 24 bytes; reordering to {ptr; short; char} gives 16",
+   "C keeps declaration order; Rust's default repr may reorder fields, #[repr(C)] uses C rules"
+  ],
+  "links": [
+   {
+    "label": "The Lost Art of Structure Packing (ESR)",
+    "url": "http://www.catb.org/esr/structure-packing/"
+   },
+   {
+    "label": "Rust Reference: Type layout",
+    "url": "https://doc.rust-lang.org/reference/type-layout.html"
+   },
+   {
+    "label": "cppreference: C alignof",
+    "url": "https://en.cppreference.com/w/c/language/alignof"
+   }
+  ]
+ },
+ {
+  "id": "stack-heap-virtual-memory",
+  "group": "Foundations",
+  "name": "Stack vs heap, virtual memory, paging, TLB",
+  "examples": [
+   "4 KiB pages (x86-64 base size)",
+   "page tables",
+   "TLB",
+   "page fault"
+  ],
+  "summary": "The stack holds fixed-size, LIFO function data; the heap holds dynamically sized data you allocate. Both live in a per-process virtual address space that hardware translates to physical pages via page tables, cached in the TLB.",
+  "why": "Every memory access goes through address translation; TLB misses, page faults and heap allocation are common hidden costs.",
+  "keyIdeas": [
+   "Pushing to the stack is cheaper than heap allocation, which must find free space and keep bookkeeping",
+   "Page tables are hierarchical: high address bits index each level, low bits are the offset within the page",
+   "x86 normally supports 4K pages plus 2M (and 1G where supported) huge pages",
+   "The TLB caches translations and is small; a miss costs a page-table walk (several memory accesses)"
+  ],
+  "links": [
+   {
+    "label": "Linux kernel: Concepts overview (memory)",
+    "url": "https://docs.kernel.org/admin-guide/mm/concepts.html"
+   },
+   {
+    "label": "OSTEP: Paging: Faster Translations (TLBs)",
+    "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/vm-tlbs.pdf"
+   },
+   {
+    "label": "OSTEP: Paging: Introduction",
+    "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/vm-paging.pdf"
+   }
+  ],
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/fundamentals?q=virtual%20memory"
+  }
+ },
+ {
+  "id": "processes-threads-context-switches",
+  "group": "Foundations",
+  "name": "Processes, threads, context switches",
+  "examples": [
+   "fork / clone",
+   "pthread_create",
+   "scheduler",
+   "ASID (tagged TLB entries)"
+  ],
+  "summary": "A process is a running program with its own address space; threads are execution streams that share one address space but have their own registers and stack. A context switch saves one thread's registers and restores another's.",
+  "why": "Thread count, blocking and scheduling decide how often you pay switch costs, and switching processes can also cost TLB and cache misses.",
+  "keyIdeas": [
+   "Threads share data easily (same address space), so shared data needs synchronization",
+   "OSTEP cites ~6 microseconds per context switch in 1996, and sub-microsecond on modern 2 to 3 GHz CPUs",
+   "Indirect cost: after switching processes, the new one takes TLB misses unless entries are tagged (ASIDs)",
+   "The OS regains control via system calls or timer interrupts, then the scheduler picks what runs next"
+  ],
+  "links": [
+   {
+    "label": "OSTEP: Limited Direct Execution",
+    "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-mechanisms.pdf"
+   },
+   {
+    "label": "OSTEP: Concurrency and Threads",
+    "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/threads-intro.pdf"
+   },
+   {
+    "label": "pthreads(7) man page",
+    "url": "https://man7.org/linux/man-pages/man7/pthreads.7.html"
+   }
+  ],
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/fundamentals?q=context%20switch"
+  }
+ },
+ {
+  "id": "system-calls-mmap",
+  "group": "Foundations",
+  "name": "System calls, mmap",
+  "examples": [
+   "syscall (x86-64 instruction)",
+   "mmap / munmap",
+   "MAP_ANONYMOUS, MAP_SHARED, MAP_PRIVATE",
+   "vDSO"
+  ],
+  "summary": "A system call is the interface through which a user program asks the kernel to act (I/O, memory, processes). mmap creates a new mapping in the process's virtual address space, either backed by a file or anonymous memory.",
+  "why": "Syscalls cost far more than function calls, so batching them and mapping memory well can dominate I/O and allocation performance.",
+  "keyIdeas": [
+   "On x86-64 Linux, the syscall instruction enters the kernel with the call number in rax",
+   "The vDSO turns some calls (e.g. gettimeofday) into plain function calls plus memory reads",
+   "mmap addresses and file offsets work in page-size units (sysconf(_SC_PAGE_SIZE))",
+   "File mappings let you read a file through memory; MAP_SHARED writes are visible to other mappers"
+  ],
+  "links": [
+   {
+    "label": "syscalls(2) man page",
+    "url": "https://man7.org/linux/man-pages/man2/syscalls.2.html"
+   },
+   {
+    "label": "mmap(2) man page",
+    "url": "https://man7.org/linux/man-pages/man2/mmap.2.html"
+   },
+   {
+    "label": "vdso(7) man page",
+    "url": "https://man7.org/linux/man-pages/man7/vdso.7.html"
+   }
+  ],
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/fundamentals?q=system%20call"
+  }
+ },
+ {
+  "id": "compiler-optimization-levels",
+  "group": "Foundations",
+  "name": "Compilers and optimization levels (-O2, LTO, inlining)",
+  "examples": [
+   "-O2 / -O3 / -Os / -Og",
+   "-flto, ThinLTO",
+   "-march=native",
+   "-fprofile-use (PGO)"
+  ],
+  "summary": "Optimization levels select bundles of compiler passes. Inlining replaces a call with the callee's body, enabling further optimization. Link-time optimization (LTO) optimizes across source files at link time.",
+  "why": "The same source can differ greatly in speed by flags; knowing them helps you benchmark fairly and read generated code.",
+  "keyIdeas": [
+   "GCC -O2: nearly all optimizations without a space-speed tradeoff; -O3 adds more (e.g. loop transforms)",
+   "-Os optimizes for size; -Og keeps code debuggable",
+   "LTO lets the optimizer inline and analyze across translation units; ThinLTO does this scalably and incrementally",
+   "-march=native targets the build machine's CPU, so the binary may not run on other machines"
+  ],
+  "links": [
+   {
+    "label": "GCC: Options That Control Optimization",
+    "url": "https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html"
+   },
+   {
+    "label": "Clang: ThinLTO",
+    "url": "https://clang.llvm.org/docs/ThinLTO.html"
+   },
+   {
+    "label": "GCC: An inline function is as fast as a macro",
+    "url": "https://gcc.gnu.org/onlinedocs/gcc/Inline.html"
+   }
+  ]
+ },
+ {
+  "id": "cache-hierarchy",
+  "group": "CPU & memory performance",
+  "name": "Cache hierarchy (L1/L2/L3), cache lines",
+  "examples": [
+   "L1d / L1i",
+   "L2, shared L3",
+   "64-byte cache line",
+   "perf stat (cache-misses)"
+  ],
+  "summary": "CPUs keep small, fast SRAM caches between the core and DRAM: per-core L1 (split data/instruction) and L2, plus a larger last-level cache usually shared by cores. Data moves between levels in whole cache lines.",
+  "why": "A cache miss to DRAM costs on the order of a hundred or more cycles, so locality often matters more than instruction count.",
+  "keyIdeas": [
+   "Cache lines are typically 64 bytes on modern x86-64; touching one byte loads the whole line",
+   "Drepper's Pentium M figures: L1d ~3 cycles, L2 ~14, main memory ~240 (exact values vary by CPU)",
+   "Spatial locality (use nearby bytes) and temporal locality (reuse soon) decide hit rates",
+   "Performance drops in steps as the working set outgrows each cache level"
+  ],
+  "links": [
+   {
+    "label": "Drepper: Memory part 2, CPU caches (LWN)",
+    "url": "https://lwn.net/Articles/252125/"
+   },
+   {
+    "label": "Drepper: What Every Programmer Should Know About Memory (PDF)",
+    "url": "https://www.akkadia.org/drepper/cpumemory.pdf"
+   }
+  ]
+ },
+ {
+  "id": "false-sharing",
+  "group": "CPU & memory performance",
+  "name": "False sharing, cache-line padding",
+  "examples": [
+   "alignas(64) / #[repr(align(64))]",
+   "std::hardware_destructive_interference_size",
+   "crossbeam CachePadded",
+   "perf c2c"
+  ],
+  "summary": "False sharing: threads write different variables on the same cache line, so coherence bounces the line between cores though no data is truly shared. Padding or aligning gives each hot variable its own line.",
+  "why": "It can make independent per-thread counters scale worse than a single thread, and the code looks perfectly correct.",
+  "keyIdeas": [
+   "A write needs the line in exclusive state, so each core must take ownership (an RFO) before writing",
+   "Fix: align or pad per-thread data to the line size; group read-mostly data apart from write-hot data",
+   "crossbeam pads to 128 bytes on x86-64 because Intel's spatial prefetcher pulls pairs of 64-byte lines",
+   "perf c2c helps locate contended cache lines on Linux"
+  ],
+  "links": [
+   {
+    "label": "Drepper: Memory part 6, concurrency (LWN)",
+    "url": "https://lwn.net/Articles/256433/"
+   },
+   {
+    "label": "cppreference: hardware_destructive_interference_size",
+    "url": "https://en.cppreference.com/w/cpp/thread/hardware_destructive_interference_size"
+   },
+   {
+    "label": "crossbeam CachePadded docs",
+    "url": "https://docs.rs/crossbeam-utils/latest/crossbeam_utils/struct.CachePadded.html"
+   }
+  ]
+ },
+ {
+  "id": "data-oriented-design-soa-aos",
+  "group": "CPU & memory performance",
+  "name": "Data-oriented design, struct-of-arrays vs array-of-structs",
+  "examples": [
+   "AoS: Point pts[N]",
+   "SoA: float x[N], y[N], z[N]",
+   "AoSoA (blocked SoA)",
+   "hot/cold field splitting"
+  ],
+  "summary": "Data-oriented design lays out data around how it is accessed rather than around objects. Array-of-structs (AoS) stores each record contiguously; struct-of-arrays (SoA) stores each field in its own contiguous array.",
+  "why": "Layout decides how many useful bytes each cache line and vector load carries, which often dominates loop speed.",
+  "keyIdeas": [
+   "SoA suits loops that touch a few fields of many records: contiguous loads, less wasted cache space",
+   "With AoS, vector code reading one field needs gathers, which are slower than contiguous loads",
+   "AoS is better when you use most of a record at once, e.g. returning a whole key after a search",
+   "AoSoA blocks (e.g. 8 records per block) mix SoA's vector loads with AoS-like locality"
+  ],
+  "links": [
+   {
+    "label": "ISPC Performance Guide: Use SoA layout",
+    "url": "https://ispc.github.io/perfguide.html"
+   },
+   {
+    "label": "Richard Fabian: Data-Oriented Design (book)",
+    "url": "https://www.dataorienteddesign.com/dodbook/"
+   },
+   {
+    "label": "Mike Acton: Data-Oriented Design and C++ (CppCon 2014)",
+    "url": "https://www.youtube.com/watch?v=rX0ItVEVjHc"
+   }
+  ]
+ },
+ {
+  "id": "branch-prediction-branchless",
+  "group": "CPU & memory performance",
+  "name": "Branch prediction, branchless code",
+  "examples": [
+   "cmov (conditional move)",
+   "lookup table instead of ?:",
+   "perf stat (branch-misses)",
+   "TAGE / perceptron predictors"
+  ],
+  "summary": "Pipelined CPUs guess the outcome of a branch and execute ahead speculatively; a wrong guess throws that work away. Branchless code computes both options and selects one with arithmetic, cmov or a table lookup.",
+  "why": "Unpredictable branches in hot loops can cost more than the work they guard; predictable ones are nearly free.",
+  "keyIdeas": [
+   "Agner Fog: a correctly predicted branch costs ~0 to 2 cycles; a mispredict ~15 to 25 depending on the CPU",
+   "Worst case is a random 50/50 branch, mispredicted about half the time",
+   "Branchless trades a possible mispredict for always doing extra work and adding data dependencies",
+   "Modern predictors use branch history (gshare, TAGE, perceptron-style) and learn periodic patterns"
+  ],
+  "links": [
+   {
+    "label": "Agner Fog: Optimizing software in C++ (PDF)",
+    "url": "https://www.agner.org/optimize/optimizing_cpp.pdf"
+   },
+   {
+    "label": "Agner Fog: Microarchitecture of Intel, AMD, VIA CPUs (PDF)",
+    "url": "https://www.agner.org/optimize/microarchitecture.pdf"
+   },
+   {
+    "label": "Dan Luu: Branch prediction",
+    "url": "https://danluu.com/branch-prediction/"
+   }
+  ]
+ },
+ {
+  "id": "simd",
+  "group": "CPU & memory performance",
+  "name": "SIMD (AVX-512, ARM NEON/SVE)",
+  "examples": [
+   "AVX2 / AVX-512 (ZMM registers)",
+   "Neon (Advanced SIMD)",
+   "SVE / SVE2",
+   "std::arch, is_x86_feature_detected!"
+  ],
+  "summary": "SIMD (single instruction, multiple data) instructions apply one operation to several values packed in a wide register. You get them via compiler auto-vectorization, intrinsics, or portable SIMD libraries.",
+  "why": "Data-parallel loops (math, parsing, search) can run several times faster when one instruction processes many lanes.",
+  "keyIdeas": [
+   "Register width: 128-bit SSE, 256-bit AVX2, 512-bit AVX-512, i.e. 4, 8 or 16 float adds per instruction",
+   "Arm Neon (Advanced SIMD) uses 64/128-bit vectors; SVE is vector-length agnostic, 128 to 2048 bits in 128-bit steps",
+   "Build for the CPU (-march) or detect features at runtime and dispatch to the best implementation",
+   "LLVM's loop and SLP vectorizers auto-vectorize; contiguous data (SoA) helps them"
+  ],
+  "links": [
+   {
+    "label": "Rust std::arch (SIMD intrinsics, feature detection)",
+    "url": "https://doc.rust-lang.org/std/arch/index.html"
+   },
+   {
+    "label": "Arm C Language Extensions (Neon, SVE)",
+    "url": "https://arm-software.github.io/acle/main/acle.html"
+   },
+   {
+    "label": "LLVM: Auto-Vectorization",
+    "url": "https://llvm.org/docs/Vectorizers.html"
+   }
+  ]
+ },
+ {
+  "id": "prefetching-bandwidth-latency",
+  "group": "CPU & memory performance",
+  "name": "Prefetching, memory bandwidth vs latency",
+  "examples": [
+   "__builtin_prefetch",
+   "_mm_prefetch",
+   "hardware stride prefetcher",
+   "non-temporal stores (_mm_stream_*)"
+  ],
+  "summary": "Latency is how long one memory access takes; bandwidth is how many bytes per second the memory system can deliver. Prefetching (by hardware or explicit instructions) requests data before it is needed to hide latency.",
+  "why": "Pointer chasing is latency-bound and streaming is bandwidth-bound; they need different fixes.",
+  "keyIdeas": [
+   "Hardware prefetchers detect sequential or strided miss patterns and fetch ahead",
+   "Drepper (2007): hardware prefetchers do not cross page boundaries, since that could trigger page faults",
+   "Random linked-list walks defeat prefetch; Drepper measured 450+ cycles per element on large sets",
+   "Software prefetch helps irregular but known-ahead addresses; issued too late or too much, it wastes bandwidth"
+  ],
+  "links": [
+   {
+    "label": "Drepper: Memory part 5, what programmers can do (LWN)",
+    "url": "https://lwn.net/Articles/255364/"
+   },
+   {
+    "label": "GCC: __builtin_prefetch",
+    "url": "https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html"
+   },
+   {
+    "label": "Drepper: Memory part 2, CPU caches (LWN)",
+    "url": "https://lwn.net/Articles/252125/"
+   }
+  ]
+ },
+ {
+  "id": "numa",
+  "group": "CPU & memory performance",
+  "name": "NUMA",
+  "examples": [
+   "numactl --hardware",
+   "numactl --cpunodebind / --membind / --interleave",
+   "set_mempolicy / mbind",
+   "MPOL_LOCAL"
+  ],
+  "summary": "On NUMA (non-uniform memory access) machines, memory is split into nodes attached to groups of CPUs. Any CPU can access any memory, but its own local node is faster than a remote node.",
+  "why": "On multi-socket servers, threads reading memory placed on another node pay extra latency and share interconnect bandwidth.",
+  "keyIdeas": [
+   "Linux default is local allocation: a page goes on the node of the CPU that first touches it",
+   "So the thread that initializes data decides its placement; initialize in the threads that will use it",
+   "Interleaving pages across nodes trades latency for aggregate bandwidth",
+   "The scheduler may migrate tasks away from their memory; pin with numactl, taskset or sched_setaffinity"
+  ],
+  "links": [
+   {
+    "label": "numa(7) man page",
+    "url": "https://man7.org/linux/man-pages/man7/numa.7.html"
+   },
+   {
+    "label": "set_mempolicy(2) man page",
+    "url": "https://man7.org/linux/man-pages/man2/set_mempolicy.2.html"
+   },
+   {
+    "label": "Linux kernel: What is NUMA?",
+    "url": "https://docs.kernel.org/mm/numa.html"
+   }
+  ]
+ },
+ {
+  "id": "huge-pages",
+  "group": "CPU & memory performance",
+  "name": "Huge pages",
+  "examples": [
+   "2 MiB / 1 GiB pages (x86-64)",
+   "hugetlbfs, MAP_HUGETLB",
+   "Transparent Huge Pages (THP)",
+   "madvise(MADV_HUGEPAGE)"
+  ],
+  "summary": "Huge pages map a large region with one page-table entry, such as 2 MiB or 1 GiB on x86-64 instead of the 4 KiB base page. Linux offers them via hugetlbfs (reserved pool) and Transparent Huge Pages (automatic).",
+  "why": "Each TLB entry covers far more memory, cutting TLB misses and page-walk cost for large working sets.",
+  "keyIdeas": [
+   "x86 CPUs normally support 4K and 2M pages, plus 1G if architecturally supported",
+   "hugetlbfs uses a pool reserved via nr_hugepages; THP is allocated on demand and merged by khugepaged",
+   "Tradeoff: a 2M page may back a region where only 1 byte is touched, wasting memory",
+   "THP can be limited to madvise(MADV_HUGEPAGE) regions instead of system-wide"
+  ],
+  "links": [
+   {
+    "label": "Linux kernel: HugeTLB Pages",
+    "url": "https://docs.kernel.org/admin-guide/mm/hugetlbpage.html"
+   },
+   {
+    "label": "Linux kernel: Transparent Hugepage Support",
+    "url": "https://docs.kernel.org/admin-guide/mm/transhuge.html"
+   },
+   {
+    "label": "Linux kernel: Memory concepts (huge pages)",
+    "url": "https://docs.kernel.org/admin-guide/mm/concepts.html"
+   }
+  ]
+ },
+ {
+  "id": "perf-flame-graphs",
+  "group": "Profiling & measurement",
+  "name": "perf, flame graphs",
+  "examples": [
+   "perf record -F 99 -g",
+   "perf report / perf script",
+   "stackcollapse-perf.pl + flamegraph.pl",
+   "--call-graph dwarf"
+  ],
+  "summary": "perf is the Linux profiler built into the kernel tree: it samples stacks at a fixed rate or on events. A flame graph merges those sampled stacks into one picture showing where CPU time goes.",
+  "why": "Shows which code paths actually consume CPU, so you optimize the widest hot path instead of guessing.",
+  "keyIdeas": [
+   "Timed sampling (e.g. 99 Hz, not 100, to avoid lockstep with periodic work) records stacks with low overhead",
+   "Flame graph: x-axis is the stack population sorted alphabetically, not time; width = how many samples include that frame",
+   "Top edge is what was running; frames below are its callers. Look for wide plateaus",
+   "Missing frame pointers give broken stacks: build with frame pointers or unwind via DWARF or LBR"
+  ],
+  "links": [
+   {
+    "label": "Brendan Gregg: Flame Graphs",
+    "url": "https://www.brendangregg.com/flamegraphs.html"
+   },
+   {
+    "label": "Brendan Gregg: perf examples",
+    "url": "https://www.brendangregg.com/perf.html"
+   },
+   {
+    "label": "perf wiki",
+    "url": "https://perfwiki.github.io/main/"
+   }
+  ],
+  "year": "2011"
+ },
+ {
+  "id": "hardware-performance-counters",
+  "group": "Profiling & measurement",
+  "name": "Hardware performance counters",
+  "examples": [
+   "perf stat -e cycles,instructions",
+   "IPC",
+   "LLC-load-misses, branch-misses",
+   "perf_event_open(2)"
+  ],
+  "summary": "CPU registers in the performance monitoring unit (PMU) that count hardware events such as cycles, instructions retired, cache misses and branch mispredictions, read through perf_event_open(2) and perf.",
+  "why": "They explain why code is slow (cache misses, mispredicts, low IPC), not just where time is spent.",
+  "keyIdeas": [
+   "Counting mode (perf stat) gives totals; sampling mode records a sample each time a counter overflows a set period",
+   "Only a few counters exist per core; with more events the kernel time-multiplexes and scales counts, which are estimates",
+   "Event sampling has skid: the recorded instruction may be after the real one; precise modifiers (:p, :pp) reduce it",
+   "Event names and meanings vary by CPU model, so check vendor docs before trusting a metric"
+  ],
+  "links": [
+   {
+    "label": "perf wiki tutorial",
+    "url": "https://perfwiki.github.io/main/tutorial/"
+   },
+   {
+    "label": "perf_event_open(2)",
+    "url": "https://man7.org/linux/man-pages/man2/perf_event_open.2.html"
+   },
+   {
+    "label": "Brendan Gregg: perf (PMCs)",
+    "url": "https://www.brendangregg.com/perf.html"
+   }
+  ]
+ },
+ {
+  "id": "tail-latency-coordinated-omission",
+  "group": "Profiling & measurement",
+  "name": "Tail latency (p99/p99.9), coordinated omission",
+  "examples": [
+   "p99 / p99.9 percentiles",
+   "HdrHistogram",
+   "wrk2 -R (constant rate)"
+  ],
+  "summary": "Tail latency is the slow end of the latency distribution (p99, p99.9). Coordinated omission is a measurement bug where a load generator waits for slow responses and so stops sampling exactly when the system is slow.",
+  "why": "With fan-out, rare slow servers dominate: 100 calls to servers with a 1% chance of 1 s makes 63% of requests take over 1 s.",
+  "keyIdeas": [
+   "Averages hide the tail; record full distributions (e.g. HdrHistogram) and report high percentiles",
+   "Closed-loop testers send the next request only after a reply, so stalls produce few samples and the tail looks good",
+   "Fix: measure latency from when a request should have been sent under a planned rate, not when it actually was (wrk2)"
+  ],
+  "links": [
+   {
+    "label": "Gil Tene: How NOT to Measure Latency",
+    "url": "https://www.youtube.com/watch?v=lJ8ydIuPFeU"
+   },
+   {
+    "label": "wrk2 README (coordinated omission)",
+    "url": "https://github.com/giltene/wrk2"
+   },
+   {
+    "label": "Dean & Barroso: The Tail at Scale",
+    "url": "https://www.barroso.org/publications/TheTailAtScale.pdf"
+   }
+  ],
+  "year": "2013"
+ },
+ {
+  "id": "microbenchmarking-pitfalls",
+  "group": "Profiling & measurement",
+  "name": "Microbenchmarking pitfalls",
+  "examples": [
+   "benchmark::DoNotOptimize / ClobberMemory",
+   "JMH Blackhole",
+   "JMH forks",
+   "cpupower frequency-set"
+  ],
+  "summary": "Microbenchmarks time tiny pieces of code in a loop. Compilers, JITs and the machine itself easily make the number measure something other than what you intended.",
+  "why": "A wrong microbenchmark gives confident but false numbers, leading to optimizations that do nothing or make real code slower.",
+  "keyIdeas": [
+   "Dead-code elimination: if the result is unused the compiler may delete the work; consume it (DoNotOptimize, Blackhole)",
+   "Hand-written repeat loops let the optimizer merge iterations; let the harness do the looping",
+   "JIT profiles from one test can pollute another in the same process; JMH forks a fresh JVM per test",
+   "Frequency scaling and ASLR add noise: pin the CPU governor, repeat runs and look at variance"
+  ],
+  "links": [
+   {
+    "label": "Google Benchmark user guide",
+    "url": "https://github.com/google/benchmark/blob/main/docs/user_guide.md"
+   },
+   {
+    "label": "Google Benchmark: reducing variance",
+    "url": "https://github.com/google/benchmark/blob/main/docs/reducing_variance.md"
+   },
+   {
+    "label": "JMH sample: dead code",
+    "url": "https://github.com/openjdk/jmh/blob/master/jmh-samples/src/main/java/org/openjdk/jmh/samples/JMHSample_08_DeadCode.java"
+   }
+  ]
+ },
+ {
+  "id": "ebpf-bpftrace",
+  "group": "Profiling & measurement",
+  "name": "eBPF tracing (bpftrace)",
+  "examples": [
+   "kprobe / uprobe",
+   "tracepoint:syscalls:*",
+   "@[comm] = count()",
+   "hist()"
+  ],
+  "summary": "eBPF runs small verified programs inside the Linux kernel when hooks fire (syscalls, kernel or user functions, tracepoints). bpftrace is an awk-like language that compiles one-liners into eBPF via LLVM.",
+  "why": "Lets you safely trace production systems with low overhead, answering questions like which process does slow I/O, without restarts.",
+  "keyIdeas": [
+   "The verifier rejects programs that could crash or never finish; a JIT then compiles bytecode to native code",
+   "Maps hold state shared between kernel and user space, so counts and histograms are aggregated in the kernel",
+   "kprobes/uprobes attach almost anywhere dynamically; tracepoints are stable, predefined hooks",
+   "Example: bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'"
+  ],
+  "links": [
+   {
+    "label": "ebpf.io: What is eBPF?",
+    "url": "https://ebpf.io/what-is-ebpf/"
+   },
+   {
+    "label": "bpftrace repo",
+    "url": "https://github.com/bpftrace/bpftrace"
+   },
+   {
+    "label": "bpftrace one-liner tutorial",
+    "url": "https://bpftrace.org/tutorial-one-liners"
+   }
+  ]
+ },
+ {
+  "id": "atomics-cas",
+  "group": "Concurrency",
+  "name": "Atomics, compare-and-swap (CAS)",
+  "examples": [
+   "std::atomic<T>::compare_exchange_weak/strong",
+   "Rust AtomicUsize::compare_exchange",
+   "fetch_add",
+   "x86 LOCK CMPXCHG"
+  ],
+  "summary": "Atomic operations read or modify a shared variable indivisibly, so no thread sees a half-done update. CAS writes a new value only if the variable still holds an expected value and reports whether it succeeded.",
+  "why": "CAS is the primitive that locks, reference counts and lock-free data structures are built on; plain reads and writes from several threads are a data race.",
+  "keyIdeas": [
+   "CAS retry loop: load the value, compute the new one, CAS it in; on failure the current value is returned and you retry",
+   "compare_exchange_weak may fail spuriously (e.g. on LL/SC hardware), so use it in loops; use strong for a single attempt",
+   "Read-modify-write ops like fetch_add avoid a CAS loop, but may be implemented with one on some targets",
+   "In Rust and C++, a data race (unsynchronized conflicting access, at least one non-atomic) is undefined behavior"
+  ],
+  "links": [
+   {
+    "label": "cppreference: compare_exchange",
+    "url": "https://en.cppreference.com/w/cpp/atomic/atomic/compare_exchange"
+   },
+   {
+    "label": "Rust std::sync::atomic",
+    "url": "https://doc.rust-lang.org/std/sync/atomic/"
+   },
+   {
+    "label": "Rust Atomics and Locks, ch. 2",
+    "url": "https://mara.nl/atomics/atomics.html"
+   }
+  ],
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/fundamentals?q=compare-and-swap"
+  }
+ },
+ {
+  "id": "memory-ordering",
+  "group": "Concurrency",
+  "name": "Memory ordering (acquire/release, seq_cst), C++/Rust memory model",
+  "examples": [
+   "Ordering::Relaxed / Acquire / Release / AcqRel / SeqCst",
+   "std::memory_order",
+   "std::atomic_thread_fence"
+  ],
+  "summary": "The memory model defines which writes one thread is guaranteed to see from another. Each atomic access carries an ordering that controls how surrounding memory operations may be reordered and what they make visible.",
+  "why": "Compilers and CPUs reorder memory accesses; the wrong ordering gives bugs that only appear on some hardware, while needlessly strong ordering costs performance.",
+  "keyIdeas": [
+   "Relaxed: atomicity plus one modification order per variable, but no ordering of other memory and no happens-before",
+   "If an Acquire load reads the value from a Release store, everything before the store happens-before everything after the load",
+   "SeqCst adds a single total order of all SeqCst operations that every thread agrees on; acquire/release is usually enough",
+   "Fences move acquire/release ordering off the access itself but still sync via atomic ops; Rust follows the C++20 model minus consume"
+  ],
+  "links": [
+   {
+    "label": "cppreference: std::memory_order",
+    "url": "https://en.cppreference.com/w/cpp/atomic/memory_order"
+   },
+   {
+    "label": "Rust Atomics and Locks, ch. 3",
+    "url": "https://mara.nl/atomics/memory-ordering.html"
+   }
+  ]
+ },
+ {
+  "id": "mutex-spinlock-futex",
+  "group": "Concurrency",
+  "name": "Mutexes, spinlocks, futexes",
+  "examples": [
+   "std::sync::Mutex",
+   "pthread_mutex_t",
+   "futex(2) FUTEX_WAIT / FUTEX_WAKE",
+   "spin lock with std::hint::spin_loop"
+  ],
+  "summary": "A mutex lets one thread at a time into a critical section. A spinlock busy-waits for the lock; a futex lets a waiting thread sleep in the kernel and be woken, while uncontended lock and unlock stay in user space.",
+  "why": "Lock choice decides whether waiting threads burn CPU or pay syscalls and context switches; good locks make the uncontended path a single atomic op.",
+  "keyIdeas": [
+   "Lock with an Acquire operation and unlock with a Release store, so each unlock happens-before the next lock",
+   "Spinning suits very short critical sections with waiters on other cores, but wastes CPU while waiting",
+   "FUTEX_WAIT sleeps only if the futex word still holds the expected value, checked atomically, which avoids lost wakeups",
+   "Futex mutex: 0 unlocked, 1 locked, 2 locked and maybe waiters; unlock calls wake only if the state was 2, so no syscalls uncontended"
+  ],
+  "links": [
+   {
+    "label": "man7: futex(2)",
+    "url": "https://man7.org/linux/man-pages/man2/futex.2.html"
+   },
+   {
+    "label": "Rust Atomics and Locks, ch. 9: Building Our Own Locks",
+    "url": "https://mara.nl/atomics/building-locks.html"
+   },
+   {
+    "label": "Rust Atomics and Locks, ch. 4: spin lock",
+    "url": "https://mara.nl/atomics/building-spinlock.html"
+   }
+  ],
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/fundamentals?q=Mutex"
+  }
+ },
+ {
+  "id": "lock-free-stacks-queues",
+  "group": "Concurrency",
+  "name": "Lock-free stacks and queues (Treiber, Michael-Scott, Vyukov MPMC)",
+  "examples": [
+   "Treiber stack",
+   "Michael-Scott queue",
+   "Vyukov bounded MPMC queue",
+   "crossbeam-queue"
+  ],
+  "summary": "Concurrent containers built from CAS instead of locks. Lock-free means that whenever threads are operating on the structure, some operation completes in a finite number of steps, even if others are delayed.",
+  "why": "A thread that is preempted while holding a lock stalls everyone; lock-free structures avoid that and often scale better under contention.",
+  "keyIdeas": [
+   "Treiber stack: push and pop CAS the top pointer and retry if another thread changed it",
+   "Michael-Scott queue: linked list with a dummy node; threads that see a lagging tail advance it before continuing",
+   "Vyukov MPMC: power-of-two ring with a sequence number per cell and one CAS per op; the author notes it is not formally lock-free",
+   "Removed nodes cannot simply be freed while other threads may read them: this leads to ABA and reclamation schemes"
+  ],
+  "links": [
+   {
+    "label": "Michael & Scott, PODC 1996 (PDF)",
+    "url": "https://www.cs.rochester.edu/~scott/papers/1996_PODC_queues.pdf"
+   },
+   {
+    "label": "Vyukov: Bounded MPMC queue",
+    "url": "https://sites.google.com/site/1024cores/home/lock-free-algorithms/queues/bounded-mpmc-queue"
+   },
+   {
+    "label": "Treiber stack (overview)",
+    "url": "https://en.wikipedia.org/wiki/Treiber_stack"
+   }
+  ],
+  "year": "1996"
+ },
+ {
+  "id": "aba-problem",
+  "group": "Concurrency",
+  "name": "ABA problem, tagged pointers",
+  "examples": [
+   "version-counter (tagged) pointers",
+   "128-bit double-width CAS",
+   "LL/SC (ARM, RISC-V, PowerPC)",
+   "hazard pointers"
+  ],
+  "summary": "A thread reads value A, other threads change it to B and back to A, and the first thread's CAS then succeeds as if nothing changed. With pointers, a freed and reused node can make a stale CAS corrupt the structure.",
+  "why": "ABA silently corrupts lock-free stacks and queues that reuse or free nodes, and it is very hard to reproduce in tests.",
+  "keyIdeas": [
+   "Tagged pointer: pair the pointer with a counter that is bumped on every successful CAS, so a recycled address no longer matches",
+   "Tags need a double-width CAS or spare pointer bits, and a counter that wraps around weakens the guarantee",
+   "LL/SC fails on any intervening store, so in principle avoids ABA, but hardware limits on code between LL and SC make it hard to exploit",
+   "Safe reclamation (GC, hazard pointers, epochs) prevents ABA from node reuse by not reusing a node while it is still referenced"
+  ],
+  "links": [
+   {
+    "label": "Michael & Scott 1996, section on ABA (PDF)",
+    "url": "https://www.cs.rochester.edu/~scott/papers/1996_PODC_queues.pdf"
+   },
+   {
+    "label": "Michael: Hazard Pointers, TPDS 2004 (PDF)",
+    "url": "https://www.cs.otago.ac.nz/cosc440/readings/hazard-pointers.pdf"
+   },
+   {
+    "label": "ABA problem (overview)",
+    "url": "https://en.wikipedia.org/wiki/ABA_problem"
+   }
+  ]
+ },
+ {
+  "id": "memory-reclamation",
+  "group": "Concurrency",
+  "name": "Memory reclamation: epoch-based, hazard pointers, RCU",
+  "examples": [
+   "crossbeam-epoch",
+   "hazard pointers (Michael 2004)",
+   "Linux RCU: rcu_read_lock, synchronize_rcu, call_rcu"
+  ],
+  "summary": "Schemes that decide when a node removed from a lock-free structure can be freed, given that other threads may still hold references to it. They defer the free until no reader can be using the node.",
+  "why": "Freeing too early is a use-after-free; never freeing leaks. Reclamation cost often dominates lock-free performance in non-GC languages.",
+  "keyIdeas": [
+   "Hazard pointers: each thread publishes the few nodes it is reading; a retired node is freed only when no hazard pointer matches it",
+   "Hazard pointers bound unreclaimed memory even if threads stall, at the cost of a publish-and-validate on each access",
+   "Epochs: readers announce the global epoch; garbage is freed two epochs later, so reads are cheap but one stalled thread blocks all frees",
+   "RCU: updaters publish a new version and free the old after a grace period, when all pre-existing readers have finished"
+  ],
+  "links": [
+   {
+    "label": "Michael: Hazard Pointers (PDF)",
+    "url": "https://www.cs.otago.ac.nz/cosc440/readings/hazard-pointers.pdf"
+   },
+   {
+    "label": "Fraser: Practical lock-freedom, sec. 5.2.3 (PDF)",
+    "url": "https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-579.pdf"
+   },
+   {
+    "label": "kernel.org: What is RCU?",
+    "url": "https://docs.kernel.org/RCU/whatisRCU.html"
+   }
+  ]
+ },
+ {
+  "id": "wait-free-algorithms",
+  "group": "Concurrency",
+  "name": "Wait-free algorithms",
+  "examples": [
+   "Kogan-Petrank wait-free queue",
+   "Herlihy universal construction",
+   "hazard pointers (wait-free reclamation)"
+  ],
+  "summary": "A wait-free operation finishes in a bounded number of its own steps no matter how other threads are scheduled. This is stronger than lock-free, which only guarantees that some thread makes progress.",
+  "why": "Wait-freedom rules out starvation and gives per-operation latency bounds, which matters for real-time and tail-latency-sensitive code.",
+  "keyIdeas": [
+   "Herlihy's consensus hierarchy: read/write registers cannot build wait-free versions of most objects; CAS is universal",
+   "Practical wait-free designs use helping: threads announce operations and faster threads complete slower threads' work",
+   "Reclamation must not weaken the guarantee: hazard pointers are themselves wait-free, so they suit wait-free structures",
+   "A CAS retry loop is lock-free but not wait-free; Rust notes ops like fetch_or may be implemented as such a loop"
+  ],
+  "links": [
+   {
+    "label": "Herlihy: Wait-Free Synchronization, TOPLAS 1991 (PDF)",
+    "url": "https://cs.brown.edu/~mph/Herlihy91/p124-herlihy.pdf"
+   },
+   {
+    "label": "Kogan & Petrank: Wait-Free Queues, PPoPP 2011 (PDF)",
+    "url": "https://www.cs.technion.ac.il/~erez/Papers/wfquque-ppopp.pdf"
+   }
+  ],
+  "year": "1991"
+ },
+ {
+  "id": "work-stealing-thread-pools",
+  "group": "Concurrency",
+  "name": "Work stealing, thread pools",
+  "examples": [
+   "Chase-Lev deque",
+   "Rayon",
+   "Tokio multi-thread scheduler",
+   "crossbeam-deque"
+  ],
+  "summary": "A thread pool reuses a fixed set of worker threads for many tasks. With work stealing, each worker keeps its own deque of tasks and an idle worker steals from another worker's deque.",
+  "why": "Per-worker queues avoid contention on one shared queue and keep tasks cache-local, while stealing keeps all cores busy under uneven load.",
+  "keyIdeas": [
+   "Owner pushes and pops at the bottom of its deque; thieves take from the top, so the owner's fast path needs little synchronization",
+   "Chase-Lev deque: a lock-free circular array that grows when full, removing the fixed-size overflow problem",
+   "Tokio: up to 256 tasks per local queue, overflow to a global queue; its design steals half of a victim's tasks at once",
+   "Limiting how many idle workers search at the same time avoids thundering-herd contention"
+  ],
+  "links": [
+   {
+    "label": "Chase & Lev, SPAA 2005 (PDF)",
+    "url": "https://www.dre.vanderbilt.edu/~schmidt/PDF/work-stealing-dequeue.pdf"
+   },
+   {
+    "label": "Tokio: Making the scheduler 10x faster",
+    "url": "https://tokio.rs/blog/2019-10-scheduler"
+   },
+   {
+    "label": "tokio::runtime docs",
+    "url": "https://docs.rs/tokio/latest/tokio/runtime/index.html"
+   }
+  ],
+  "year": "1999",
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/fundamentals?q=thread%20pool"
+  }
+ },
+ {
+  "id": "async-runtimes-coroutines",
+  "group": "Concurrency",
+  "name": "Async runtimes (Tokio), coroutines",
+  "examples": [
+   "Rust Future / async-await",
+   "Tokio",
+   "C++20 co_await / co_yield",
+   "Waker"
+  ],
+  "summary": "Coroutines are functions that can suspend and resume. In Rust an async fn compiles to a state-machine Future that does nothing until polled; a runtime such as Tokio polls tasks and wakes them when I/O or timers are ready.",
+  "why": "Many tasks can share a few threads, so waiting on I/O costs a small state object instead of a blocked OS thread, which matters for high-concurrency servers.",
+  "keyIdeas": [
+   "poll returns Ready or Pending; a Pending future stores the Waker and calls it when progress is possible",
+   "Scheduling is cooperative: tasks yield only at await points, so blocking or long CPU work stalls a worker (use spawn_blocking)",
+   "C++20 and Rust coroutines are stackless: resume state lives in a separate frame, not on its own stack",
+   "Tokio offers a current-thread runtime and a multi-thread work-stealing runtime"
+  ],
+  "links": [
+   {
+    "label": "Rust std: trait Future",
+    "url": "https://doc.rust-lang.org/std/future/trait.Future.html"
+   },
+   {
+    "label": "Tokio tutorial: Async in depth",
+    "url": "https://tokio.rs/tokio/tutorial/async"
+   },
+   {
+    "label": "cppreference: Coroutines (C++20)",
+    "url": "https://en.cppreference.com/w/cpp/language/coroutines"
+   }
+  ],
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/fundamentals?q=async%2Fawait"
+  }
+ },
+ {
+  "id": "concurrency-testing",
+  "group": "Concurrency",
+  "name": "Concurrency testing (loom, ThreadSanitizer)",
+  "examples": [
+   "loom::model",
+   "ThreadSanitizer (-fsanitize=thread)",
+   "LOOM_MAX_PREEMPTIONS"
+  ],
+  "summary": "Tools that find concurrency bugs ordinary tests miss. loom systematically runs a Rust test under many thread interleavings and C11 memory-model behaviors; ThreadSanitizer instruments a program to report data races as it runs.",
+  "why": "Races and ordering bugs depend on rare timings, so a test can pass thousands of times and still be wrong.",
+  "keyIdeas": [
+   "loom swaps std sync types for loom::sync under cfg(loom) and explores executions, pruning equivalent ones",
+   "loom can be bounded with LOOM_MAX_PREEMPTIONS (2 or 3 catches most bugs); it treats SeqCst accesses as AcqRel",
+   "TSan only finds races on code paths that actually execute; typical cost is 5-15x slowdown and 5-10x memory (clang docs)",
+   "Use both: loom for small lock-free cores, TSan or similar for whole-program runs"
+  ],
+  "links": [
+   {
+    "label": "loom (GitHub)",
+    "url": "https://github.com/tokio-rs/loom"
+   },
+   {
+    "label": "Clang ThreadSanitizer docs",
+    "url": "https://clang.llvm.org/docs/ThreadSanitizer.html"
+   },
+   {
+    "label": "ThreadSanitizer C++ manual",
+    "url": "https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual"
+   }
+  ]
+ },
+ {
+  "id": "slab-bump-buddy-allocators",
+  "group": "Memory allocators",
+  "name": "Slab, bump/arena, buddy allocators",
+  "examples": [
+   "kmem_cache_alloc (slab)",
+   "bumpalo / arena reset",
+   "Linux page allocator (binary buddy)"
+  ],
+  "summary": "Three classic allocator designs: buddy splits memory into power-of-two blocks, slab keeps caches of same-size objects, and bump/arena hands out memory by advancing a pointer and frees everything at once.",
+  "why": "Choosing the right scheme trades speed, memory waste and flexibility; general-purpose mallocs are built from these pieces.",
+  "keyIdeas": [
+   "Buddy: halve blocks until one fits; on free, merge with its free buddy. Fast, but rounding wastes space",
+   "Slab: per-type caches of objects carved from pages; can keep objects constructed between uses (Bonwick 1994)",
+   "Bump: allocation is a bounds check plus pointer add; no individual free, reset the arena to free a whole phase"
+  ],
+  "links": [
+   {
+    "label": "Bonwick: The Slab Allocator (1994)",
+    "url": "https://www.usenix.org/legacy/publications/library/proceedings/bos94/full_papers/bonwick.a"
+   },
+   {
+    "label": "Gorman: Linux buddy allocator",
+    "url": "https://www.kernel.org/doc/gorman/html/understand/understand009.html"
+   },
+   {
+    "label": "bumpalo docs: bump allocation",
+    "url": "https://docs.rs/bumpalo/latest/bumpalo/"
+   }
+  ]
+ },
+ {
+  "id": "thread-caches-magazines",
+  "group": "Memory allocators",
+  "name": "Thread caches / magazines",
+  "examples": [
+   "Solaris magazine layer + depot",
+   "tcmalloc per-CPU cache (rseq)",
+   "jemalloc tcache"
+  ],
+  "summary": "A small per-thread or per-CPU stash of free objects that serves most malloc/free calls without touching shared, locked allocator state. Magazines (Bonwick and Adams) are the per-CPU version for slab caches.",
+  "why": "Global allocator locks stop scaling on many cores; local caches make the common path lock-free and contention-free.",
+  "keyIdeas": [
+   "Magazine = fixed array of M object pointers used as a stack; full and empty magazines are swapped with a global depot",
+   "Keeping a loaded plus previous magazine bounds depot trips to 1/M, avoiding thrashing at a magazine boundary",
+   "Cost: memory sits idle in each cache, raising footprint and fragmentation, so caches are sized dynamically"
+  ],
+  "links": [
+   {
+    "label": "Bonwick & Adams: Magazines and Vmem (2001)",
+    "url": "https://www.usenix.org/legacy/event/usenix01/full_papers/bonwick/bonwick.pdf"
+   },
+   {
+    "label": "TCMalloc design: front-end caches",
+    "url": "https://google.github.io/tcmalloc/design.html"
+   }
+  ],
+  "year": "2001"
+ },
+ {
+  "id": "jemalloc-mimalloc-tcmalloc",
+  "group": "Memory allocators",
+  "name": "jemalloc, mimalloc, tcmalloc internals",
+  "examples": [
+   "jemalloc arenas + tcache",
+   "mimalloc free list sharding",
+   "tcmalloc transfer cache / central free list",
+   "size classes"
+  ],
+  "summary": "Three widely used drop-in malloc replacements. All round small requests up to size classes and serve them from thread or CPU local caches, but differ in how they share memory between threads and return it to the OS.",
+  "why": "Swapping malloc can change throughput, tail latency and memory footprint of a multi-threaded service without code changes.",
+  "keyIdeas": [
+   "jemalloc: many independent arenas (default 4x CPUs) plus thread caches; small objects in slabs tracked by bitmaps",
+   "mimalloc: per-page free lists (pages usually 64 KiB), with a separate list so a free from another thread is a single CAS",
+   "tcmalloc: per-CPU (via rseq) or per-thread front-end, a per-size-class middle-end, and a hugepage-aware back-end",
+   "Shared tradeoff: more caching means less locking but more idle memory held in caches"
+  ],
+  "links": [
+   {
+    "label": "jemalloc manual (implementation notes)",
+    "url": "https://jemalloc.net/jemalloc.3.html"
+   },
+   {
+    "label": "mimalloc README",
+    "url": "https://github.com/microsoft/mimalloc"
+   },
+   {
+    "label": "TCMalloc design",
+    "url": "https://google.github.io/tcmalloc/design.html"
+   }
+  ]
+ },
+ {
+  "id": "memory-fragmentation",
+  "group": "Memory allocators",
+  "name": "Fragmentation",
+  "examples": [
+   "internal vs external fragmentation",
+   "size-class rounding",
+   "jemalloc dirty_decay_ms purging"
+  ],
+  "summary": "Memory the allocator holds but cannot use for the request at hand. Internal fragmentation is waste inside a block larger than requested; external is free memory split into pieces too small to satisfy a request.",
+  "why": "Long-running services can grow in memory use and hit OOM even when live data is stable, purely because of allocator layout.",
+  "keyIdeas": [
+   "Size classes and power-of-two rounding trade internal waste for speed and simpler reuse",
+   "Placement policy matters: Johnstone and Wilson found near-zero real fragmentation for good policies on 8 real programs",
+   "Per-thread caches and many arenas add some fragmentation; allocators purge empty pages back to the OS to limit it"
+  ],
+  "links": [
+   {
+    "label": "Johnstone & Wilson: The Memory Fragmentation Problem: Solved? (1998)",
+    "url": "https://www.cs.tufts.edu/~nr/cs257/archive/paul-wilson/fragmentation.pdf"
+   },
+   {
+    "label": "Gorman: avoiding fragmentation",
+    "url": "https://www.kernel.org/doc/gorman/html/understand/understand009.html"
+   },
+   {
+    "label": "jemalloc manual",
+    "url": "https://jemalloc.net/jemalloc.3.html"
+   }
+  ],
+  "year": "1998"
+ },
+ {
+  "id": "fsync-wal-group-commit",
+  "group": "Storage & databases",
+  "name": "fsync, write-ahead logs, group commit",
+  "examples": [
+   "fsync / fdatasync",
+   "PostgreSQL WAL",
+   "commit_delay / commit_siblings"
+  ],
+  "summary": "A write-ahead log (WAL) records every change and is flushed to stable storage with fsync before the changed data pages are written; group commit lets one flush make many transactions durable.",
+  "why": "A commit is durable only once its log reaches stable storage, and that flush is often the slowest step, so sharing flushes raises commit throughput.",
+  "keyIdeas": [
+   "fsync blocks until the device reports the file's data and metadata are stored; fdatasync skips metadata not needed to read the data.",
+   "fsync on a file does not make its directory entry durable; a newly created file also needs an fsync on its directory.",
+   "At commit only the sequential WAL is flushed; data pages are written later and can be redone from the log after a crash.",
+   "Group commit: one WAL flush commits many concurrent transactions; PostgreSQL's commit_delay trades some latency for bigger batches."
+  ],
+  "links": [
+   {
+    "label": "fsync(2) man page",
+    "url": "https://man7.org/linux/man-pages/man2/fsync.2.html"
+   },
+   {
+    "label": "PostgreSQL: Write-Ahead Logging",
+    "url": "https://www.postgresql.org/docs/current/wal-intro.html"
+   },
+   {
+    "label": "PostgreSQL: WAL settings (commit_delay)",
+    "url": "https://www.postgresql.org/docs/current/runtime-config-wal.html"
+   }
+  ]
+ },
+ {
+  "id": "aries-crash-recovery",
+  "group": "Storage & databases",
+  "name": "Crash recovery (ARIES)",
+  "examples": [
+   "LSN / pageLSN / flushedLSN",
+   "compensation log records (CLRs)",
+   "analysis, redo, undo",
+   "IBM DB2"
+  ],
+  "summary": "ARIES is IBM's WAL-based recovery algorithm (Mohan et al.) that restores a database after a crash in three passes: analysis, redo (repeating history), and undo of transactions that never committed.",
+  "why": "It lets the buffer pool write uncommitted pages early (steal) and skip forcing pages at commit (no-force) while keeping atomicity and durability.",
+  "keyIdeas": [
+   "Every log record gets an LSN; each page stores the pageLSN of its last update and may be flushed only once the log is flushed past it.",
+   "Analysis rebuilds the active transaction and dirty page tables; redo replays every logged update, even of losers, from the smallest recLSN.",
+   "Undo rolls back uncommitted transactions in reverse order and logs a CLR per undone change, so a crash mid-recovery never repeats an undo."
+  ],
+  "links": [
+   {
+    "label": "ARIES paper (Mohan et al., TODS 1992)",
+    "url": "https://cs.stanford.edu/people/chrismre/cs345/rl/aries.pdf"
+   },
+   {
+    "label": "CMU 15-445 notes: Recovery",
+    "url": "https://15445.courses.cs.cmu.edu/fall2024/notes/21-recovery.pdf"
+   },
+   {
+    "label": "CMU 15-445 notes: Logging",
+    "url": "https://15445.courses.cs.cmu.edu/fall2024/notes/20-logging.pdf"
+   }
+  ],
+  "year": "1992"
+ },
+ {
+  "id": "btree-vs-lsm-compaction",
+  "group": "Storage & databases",
+  "name": "B-trees vs LSM-trees, compaction",
+  "examples": [
+   "B+tree",
+   "RocksDB / LevelDB",
+   "leveled vs tiered (universal) compaction",
+   "Bloom filters"
+  ],
+  "summary": "A B+tree keeps keys sorted in fixed-size pages and updates them in place. An LSM-tree buffers writes in an in-memory memtable, writes them out as sorted immutable files (SSTables), and merges files in the background.",
+  "why": "The choice sets the balance of read, write and space amplification: LSM-trees turn random writes into sequential ones, while B+trees give cheaper reads.",
+  "keyIdeas": [
+   "B+tree: balanced (every leaf at the same depth), O(log n) lookups, inserts and deletes; sibling pointers between leaves speed range scans.",
+   "LSM read: check the memtable, then SSTables newest to oldest; per-file min/max keys and Bloom filters skip files that cannot hold the key.",
+   "Compaction sort-merges SSTables, keeping each key's newest version: it frees space and speeds reads but rewrites data (write amplification).",
+   "Leveled compaction minimizes space amplification at the cost of write amplification; tiered (RocksDB 'universal') makes the opposite trade."
+  ],
+  "links": [
+   {
+    "label": "The LSM-Tree paper (O'Neil et al.)",
+    "url": "https://www.cs.umb.edu/~poneil/lsmtree.pdf"
+   },
+   {
+    "label": "RocksDB wiki: Compaction",
+    "url": "https://github.com/facebook/rocksdb/wiki/Compaction"
+   },
+   {
+    "label": "CMU 15-445 notes: Log-structured storage",
+    "url": "https://15445.courses.cs.cmu.edu/fall2024/notes/04-storage2.pdf"
+   }
+  ],
+  "year": "1996",
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/systemdesign?q=Storage%20Engines%3A%20B-Tree%20vs%20LSM-Tree"
+  }
+ },
+ {
+  "id": "buffer-pool-eviction",
+  "group": "Storage & databases",
+  "name": "Buffer pools, page eviction (CLOCK, LRU-K, 2Q)",
+  "examples": [
+   "PostgreSQL clock-sweep",
+   "LRU-K",
+   "2Q",
+   "dirty pages and pinning"
+  ],
+  "summary": "A buffer pool is the database's in-memory cache of fixed-size disk pages. When it is full, a replacement policy picks an unpinned page to evict, writing it back to disk first if it is dirty.",
+  "why": "The hit rate decides how often queries wait on disk, and plain LRU can be flushed out by a single large sequential scan.",
+  "keyIdeas": [
+   "CLOCK approximates LRU with one reference bit per frame: a rotating hand clears set bits and evicts the first frame whose bit is already 0.",
+   "Sequential flooding: a large scan fills LRU or CLOCK with pages read once, evicting the hot pages that other queries need.",
+   "LRU-K evicts the page whose K-th most recent reference is oldest, so once-touched pages leave quickly; it costs extra history tracking.",
+   "2Q puts new pages in a FIFO (A1in), remembers evicted ones by ID (A1out), and promotes a page to the LRU queue Am only on a hit in A1out."
+  ],
+  "links": [
+   {
+    "label": "CMU 15-445 notes: Buffer pools",
+    "url": "https://15445.courses.cs.cmu.edu/fall2024/notes/06-bufferpool.pdf"
+   },
+   {
+    "label": "LRU-K paper (O'Neil et al., SIGMOD 1993)",
+    "url": "https://www.cs.cmu.edu/~natassa/courses/15-721/papers/p297-o_neil.pdf"
+   },
+   {
+    "label": "2Q paper (Johnson and Shasha, VLDB 1994)",
+    "url": "https://www.vldb.org/conf/1994/P439.PDF"
+   }
+  ]
+ },
+ {
+  "id": "mvcc-isolation-levels",
+  "group": "Storage & databases",
+  "name": "MVCC, transaction isolation levels",
+  "examples": [
+   "PostgreSQL MVCC and VACUUM",
+   "Read Committed",
+   "Repeatable Read (snapshot isolation)",
+   "Serializable Snapshot Isolation (SSI)"
+  ],
+  "summary": "MVCC keeps several versions of each row so each statement or transaction reads a consistent snapshot. Isolation levels define which anomalies (dirty, nonrepeatable and phantom reads, serialization anomalies) can appear.",
+  "why": "Under MVCC readers never block writers and writers never block readers, but weaker isolation levels let real concurrency bugs through.",
+  "keyIdeas": [
+   "In PostgreSQL an UPDATE or DELETE leaves the old row version in place; VACUUM reclaims it once no transaction can still see it.",
+   "Read Committed (PostgreSQL's default) takes a new snapshot per statement, so two SELECTs in one transaction may see different data.",
+   "Repeatable Read uses one snapshot per transaction; Serializable adds SSI checks that abort transactions that could break serial order.",
+   "Stronger levels cause serialization failures, so applications must be ready to retry transactions."
+  ],
+  "links": [
+   {
+    "label": "PostgreSQL: Concurrency control intro",
+    "url": "https://www.postgresql.org/docs/current/mvcc-intro.html"
+   },
+   {
+    "label": "PostgreSQL: Transaction isolation",
+    "url": "https://www.postgresql.org/docs/current/transaction-iso.html"
+   },
+   {
+    "label": "PostgreSQL: Routine vacuuming",
+    "url": "https://www.postgresql.org/docs/current/routine-vacuuming.html"
+   }
+  ],
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/fundamentals?q=MVCC"
+  }
+ },
+ {
+  "id": "columnar-vectorized-execution",
+  "group": "Storage & databases",
+  "name": "Columnar storage, vectorized execution",
+  "examples": [
+   "Apache Parquet (on disk)",
+   "Apache Arrow (in memory)",
+   "MonetDB/X100"
+  ],
+  "summary": "Columnar storage keeps each column's values contiguous instead of each row's. Vectorized execution runs query operators over batches (vectors) of column values rather than one tuple at a time.",
+  "why": "Analytic queries touch few columns of many rows, so columnar layouts cut I/O, and vector-at-a-time loops cut per-tuple interpretation overhead on the CPU.",
+  "keyIdeas": [
+   "Parquet splits a table into row groups holding one column chunk per column; footer metadata lets readers fetch only the columns they need.",
+   "Arrow is a standard in-memory columnar format: contiguous buffers, O(1) random access, SIMD friendly, and shareable without copying.",
+   "Tuple-at-a-time (Volcano) execution pays interpretation cost per row; X100 runs primitives on cache-resident vectors of about 1000 values.",
+   "Columns scan and compress well but are costly to update, and rebuilding a row means matching values at the same offset in each column."
+  ],
+  "links": [
+   {
+    "label": "MonetDB/X100 paper (CIDR 2005)",
+    "url": "https://www.cidrdb.org/cidr2005/papers/P19.pdf"
+   },
+   {
+    "label": "Apache Parquet: File format",
+    "url": "https://parquet.apache.org/docs/file-format/"
+   },
+   {
+    "label": "Apache Arrow: Columnar format",
+    "url": "https://arrow.apache.org/docs/format/Columnar.html"
+   }
+  ],
+  "year": "2005"
+ },
+ {
+  "id": "learned-indexes",
+  "group": "Storage & databases",
+  "name": "Learned indexes",
+  "examples": [
+   "Recursive Model Index (RMI)",
+   "ALEX",
+   "PGM-index"
+  ],
+  "summary": "A learned index replaces a structure like a B-tree with a model that predicts where a key sits in sorted data, then corrects the guess with a short search inside the model's known error bounds.",
+  "why": "When keys follow a learnable distribution, a small model can beat a cache-optimized B-tree on speed and memory (up to 70% faster in the original paper).",
+  "keyIdeas": [
+   "A B-tree is a model from key to position with a min and max error; looking up a key in sorted data amounts to approximating its CDF.",
+   "The Recursive Model Index stacks models: each stage picks a more specialized model until the last stage predicts the position.",
+   "Last-stage models store their min and max error, so a lookup only searches that window around the prediction.",
+   "The original work targets read-only, in-memory data; inserts are harder, and later designs such as ALEX make learned indexes updatable."
+  ],
+  "links": [
+   {
+    "label": "The Case for Learned Index Structures (arXiv)",
+    "url": "https://arxiv.org/abs/1712.01208"
+   },
+   {
+    "label": "ALEX: An Updatable Adaptive Learned Index (arXiv)",
+    "url": "https://arxiv.org/abs/1905.08898"
+   },
+   {
+    "label": "The PGM-index (arXiv)",
+    "url": "https://arxiv.org/abs/1910.06169"
+   }
+  ],
+  "year": "2017"
+ },
+ {
+  "id": "object-storage-databases",
+  "group": "Storage & databases",
+  "name": "Object storage-backed databases (S3-native, tiered storage)",
+  "examples": [
+   "WarpStream (Kafka on S3)",
+   "Neon (Postgres with safekeepers and pageservers)",
+   "turbopuffer",
+   "Kafka tiered storage (KIP-405)"
+  ],
+  "summary": "These systems keep durable data in object storage such as S3 and run compute as mostly stateless nodes with local caches, either fully S3-native or by moving older data from local disks to S3 (tiered storage).",
+  "why": "Object storage is cheap, durable and shared, so compute scales without rebalancing data, but each request has high latency and a per-operation cost.",
+  "keyIdeas": [
+   "Batch writes into few large objects: S3 PUTs cost money and time, so WarpStream packs many partitions per file and compacts them later.",
+   "Keep S3 off the hot path: Neon compute reads memory, then a local NVMe cache, then a pageserver, and never reads object storage directly.",
+   "Neon commits once a Paxos quorum of safekeepers acknowledges the WAL; pageservers turn WAL into pages and keep history in object storage.",
+   "Tiered storage (Kafka KIP-405) keeps recent log segments on broker disks and moves completed segments to S3 or HDFS for long retention."
+  ],
+  "links": [
+   {
+    "label": "WarpStream: Architecture",
+    "url": "https://docs.warpstream.com/warpstream/overview/architecture"
+   },
+   {
+    "label": "Neon: Architecture overview",
+    "url": "https://neon.com/docs/introduction/architecture-overview"
+   },
+   {
+    "label": "KIP-405: Kafka Tiered Storage",
+    "url": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-405%3A+Kafka+Tiered+Storage"
+   }
+  ]
+ },
+ {
+  "id": "io-uring",
+  "group": "I/O & networking",
+  "name": "io_uring",
+  "examples": [
+   "io_uring_setup / io_uring_enter",
+   "liburing",
+   "SQ polling (IORING_SETUP_SQPOLL)"
+  ],
+  "summary": "io_uring is a Linux asynchronous I/O interface, introduced in 2019, in which the application and kernel share two ring buffers: a submission queue of requests (SQEs) and a completion queue of results (CQEs).",
+  "why": "Requests and results travel through shared memory, so many I/Os can be batched per system call, or with SQ polling submitted with no syscall at all.",
+  "keyIdeas": [
+   "The app writes SQEs at the SQ tail and calls io_uring_enter to submit them; the kernel posts CQEs at the CQ tail for the app to read.",
+   "One io_uring_enter call can submit a batch of requests and also wait for a given number of completions.",
+   "With SQ polling a kernel thread picks up new SQEs as they are added, avoiding the io_uring_enter syscall on submission.",
+   "It was designed to replace Linux AIO, which was hard to use and handled buffered I/O poorly."
+  ],
+  "links": [
+   {
+    "label": "io_uring(7) man page",
+    "url": "https://man7.org/linux/man-pages/man7/io_uring.7.html"
+   },
+   {
+    "label": "LWN: Ringing in a new asynchronous I/O API",
+    "url": "https://lwn.net/Articles/776703/"
+   },
+   {
+    "label": "Axboe: Faster IO through io_uring (slides)",
+    "url": "https://archives.kernel-recipes.org/wp-content/uploads/2025/01/kernel-recipes-2019-axboe.pdf"
+   }
+  ],
+  "year": "2019"
+ },
+ {
+  "id": "epoll-event-loops",
+  "group": "I/O & networking",
+  "name": "epoll, event loops",
+  "examples": [
+   "epoll_ctl / epoll_wait",
+   "kqueue, IOCP",
+   "libuv (Node.js)"
+  ],
+  "summary": "epoll is the Linux API for watching many file descriptors and learning which are ready for I/O. An event loop is a thread that blocks on such a poller and runs callbacks for ready sockets, timers and finished work.",
+  "why": "One thread can serve a large number of connections without a thread per connection, as long as no callback blocks the loop.",
+  "keyIdeas": [
+   "epoll_ctl adds fds to the kernel's interest list; epoll_wait blocks until some are ready and returns them from the ready list.",
+   "Level-triggered (default) acts like poll(2); edge-triggered (EPOLLET) reports only changes, so use nonblocking fds and read until EAGAIN.",
+   "libuv polls nonblocking sockets with epoll, kqueue, event ports or IOCP, and uses a thread pool for file I/O, which has no such primitive.",
+   "A libuv loop is single-threaded and not thread-safe; to use more cores, run separate loops in separate threads."
+  ],
+  "links": [
+   {
+    "label": "epoll(7) man page",
+    "url": "https://man7.org/linux/man-pages/man7/epoll.7.html"
+   },
+   {
+    "label": "libuv: Design overview",
+    "url": "https://docs.libuv.org/en/v1.x/design.html"
+   }
+  ]
+ },
+ {
+  "id": "zero-copy-io",
+  "group": "I/O & networking",
+  "name": "Zero-copy I/O",
+  "examples": [
+   "sendfile",
+   "splice",
+   "MSG_ZEROCOPY"
+  ],
+  "summary": "Zero-copy I/O moves data between files, pipes and sockets without copying it through a user-space buffer, avoiding the read() into user memory and write() back into the kernel round trip.",
+  "why": "Every copy costs CPU time and memory bandwidth, which dominates when serving large files or moving bulk network data.",
+  "keyIdeas": [
+   "sendfile copies from a file (one supporting mmap-like access) to another fd, such as a socket, entirely inside the kernel.",
+   "splice moves data between two fds without copying between kernel and user address space, but one of the fds must be a pipe.",
+   "MSG_ZEROCOPY on send() pins the user pages instead of copying them; the kernel later notifies when the buffer is safe to modify.",
+   "Page pinning and notifications have their own cost, so MSG_ZEROCOPY is generally only effective for writes over about 10 KB."
+  ],
+  "links": [
+   {
+    "label": "sendfile(2) man page",
+    "url": "https://man7.org/linux/man-pages/man2/sendfile.2.html"
+   },
+   {
+    "label": "splice(2) man page",
+    "url": "https://man7.org/linux/man-pages/man2/splice.2.html"
+   },
+   {
+    "label": "Linux kernel docs: MSG_ZEROCOPY",
+    "url": "https://www.kernel.org/doc/html/latest/networking/msg_zerocopy.html"
+   }
+  ]
+ },
+ {
+  "id": "kernel-bypass",
+  "group": "I/O & networking",
+  "name": "Kernel bypass (DPDK, SPDK)",
+  "examples": [
+   "DPDK poll mode drivers",
+   "SPDK user-space NVMe driver",
+   "vfio-pci",
+   "hugepages"
+  ],
+  "summary": "Kernel bypass runs the device driver inside the application: a NIC (DPDK) or NVMe SSD (SPDK) is detached from its kernel driver and the program drives the hardware directly from user space.",
+  "why": "Taking syscalls, interrupts, copies and locks out of the I/O path cuts per-operation latency and CPU cost, but the kernel's stack and filesystems no longer apply.",
+  "keyIdeas": [
+   "The device is unbound from its kernel driver and bound to vfio-pci (or uio); the app then maps the device's registers and drives it itself.",
+   "Poll mode: the app checks queues for completions instead of taking interrupts, cutting latency and jitter at a cost in CPU and power.",
+   "SPDK gives each thread its own NVMe hardware queue so submission needs no locks; DPDK passes packets between cores over lockless rings.",
+   "Once unbound, the kernel cannot use the device: for an NVMe drive, /dev/nvme* devices and filesystems mounted on it disappear."
+  ],
+  "links": [
+   {
+    "label": "DPDK: Programmer's guide overview",
+    "url": "https://doc.dpdk.org/guides/prog_guide/overview.html"
+   },
+   {
+    "label": "DPDK: Linux drivers (vfio-pci)",
+    "url": "https://doc.dpdk.org/guides/linux_gsg/linux_drivers.html"
+   },
+   {
+    "label": "SPDK: User space drivers",
+    "url": "https://spdk.io/doc/userspace.html"
+   }
+  ]
+ },
+ {
+  "id": "rdma",
+  "group": "I/O & networking",
+  "name": "RDMA",
+  "examples": [
+   "InfiniBand",
+   "RoCE",
+   "iWARP",
+   "libibverbs (ibv_post_send)"
+  ],
+  "summary": "Remote Direct Memory Access lets a network adapter read or write another host's memory directly, without involving the remote operating system or CPU. It runs over InfiniBand, RoCE or iWARP.",
+  "why": "Bypassing the network stack and avoiding copies gives lower latency, lower CPU load and higher bandwidth than TCP/IP messaging.",
+  "keyIdeas": [
+   "Apps post work requests to a queue pair's send or receive queue (e.g. ibv_post_send) and collect results from a completion queue.",
+   "Memory must be registered first; registration yields an lkey and rkey, and a peer needs the rkey and address to access the region.",
+   "Send/receive is two-sided: the receiver posts a buffer. RDMA read and write are one-sided: no remote CPU (write with immediate does notify).",
+   "All three transports share the verbs API; RoCE runs RDMA over Ethernet without the TCP transport that iWARP requires."
+  ],
+  "links": [
+   {
+    "label": "NVIDIA RDMA Aware Networks Programming Manual",
+    "url": "https://docs.nvidia.com/rdma-aware-networks-programming-user-manual-1-7.pdf"
+   },
+   {
+    "label": "ibv_post_send(3) man page",
+    "url": "https://man7.org/linux/man-pages/man3/ibv_post_send.3.html"
+   }
+  ]
+ },
+ {
+  "id": "nvme-ssd-internals",
+  "group": "I/O & networking",
+  "name": "NVMe and SSD internals (write amplification, FTL)",
+  "examples": [
+   "NAND pages and erase blocks",
+   "flash translation layer (FTL)",
+   "garbage collection and over-provisioning",
+   "NVMe queues"
+  ],
+  "summary": "An SSD stores data in NAND flash that is written in pages but erased only in whole blocks. Its firmware flash translation layer (FTL) maps logical block addresses to physical pages and cleans old blocks in the background.",
+  "why": "Cleaning makes the drive write more than the host asked (write amplification), which lowers throughput and wears out flash that has limited erase cycles.",
+  "keyIdeas": [
+   "Flash cannot be overwritten in place: each write of a logical block goes to a fresh page; the FTL remaps it and marks the old page stale.",
+   "Cleaning copies a block's still-valid pages elsewhere before erasing it; write amplification is NAND writes divided by host writes.",
+   "Sequential writes keep write amplification near 1; random writes raise it. Spare capacity (over-provisioning) cuts foreground cleaning.",
+   "Wear leveling spreads erases evenly across blocks; NVMe exposes multiple hardware queues so threads can submit I/O in parallel."
+  ],
+  "links": [
+   {
+    "label": "Design Tradeoffs for SSD Performance (USENIX ATC 2008)",
+    "url": "https://www.usenix.org/legacy/event/usenix08/tech/full_papers/agrawal/agrawal.pdf"
+   },
+   {
+    "label": "Solidigm: What is write amplification?",
+    "url": "https://www.solidigm.com/support-page/maintenance-tools/ka-00015.html"
+   },
+   {
+    "label": "SPDK: User space drivers (NVMe queues)",
+    "url": "https://spdk.io/doc/userspace.html"
+   }
+  ]
+ },
+ {
+  "id": "raft-paxos-consensus",
+  "group": "Distributed systems",
+  "name": "Raft and Paxos consensus",
+  "examples": [
+   "Raft (leader, followers, terms)",
+   "Paxos (proposers, acceptors, learners)",
+   "Replicated state machine",
+   "Majority quorum"
+  ],
+  "summary": "Consensus lets a group of servers agree on a sequence of commands so every replica applies the same log in the same order and stays in the same state. Paxos came first; Raft is designed to be easier to understand.",
+  "why": "It is how replicated systems stay correct under crashes: a 5-server cluster survives 2 failures, and with more it stops making progress rather than returning wrong results.",
+  "keyIdeas": [
+   "Progress needs a majority: any two majorities overlap, so two conflicting values cannot both be chosen.",
+   "Paxos: a proposer sends prepare(n) to acceptors, then accept requests once a majority has promised.",
+   "Raft: one leader per term, elected using randomized election timeouts; it replicates log entries to followers.",
+   "A leader commits a current-term entry once a majority stores it; earlier entries commit with it, then are safe to apply."
+  ],
+  "links": [
+   {
+    "label": "Raft site (raft.github.io)",
+    "url": "https://raft.github.io/"
+   },
+   {
+    "label": "Raft paper (Ongaro, Ousterhout)",
+    "url": "https://raft.github.io/raft.pdf"
+   },
+   {
+    "label": "Paxos Made Simple (Lamport)",
+    "url": "https://lamport.azurewebsites.net/pubs/paxos-simple.pdf"
+   }
+  ],
+  "year": "1998",
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/systemdesign?q=Consensus%20%26%20Coordination"
+  }
+ },
+ {
+  "id": "replication-quorums",
+  "group": "Distributed systems",
+  "name": "Replication and quorums",
+  "examples": [
+   "N, R, W replica counts",
+   "Amazon Dynamo",
+   "Sloppy quorum and hinted handoff",
+   "Leader-based replication"
+  ],
+  "summary": "Replication keeps copies of data on several nodes. With N replicas, a write waits for W acknowledgements and a read contacts R replicas; choosing R and W trades latency and availability against consistency.",
+  "why": "R and W decide both tail latency (each request waits for the slowest of R or W replicas) and whether a read is guaranteed to see the latest write.",
+  "keyIdeas": [
+   "If R + W > N, every read set overlaps every write set, so at least one contacted replica has the latest write.",
+   "Smaller R or W means lower latency, since an operation only waits for the slowest of the R (or W) replicas.",
+   "Dynamo's sloppy quorum uses the first N healthy nodes, so writes stay available when some home replicas are down.",
+   "Hinted handoff: a stand-in node holds the write with a hint and delivers it once the intended node recovers."
+  ],
+  "links": [
+   {
+    "label": "Dynamo paper (SOSP 2007)",
+    "url": "https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf"
+   },
+   {
+    "label": "Eventually Consistent (Vogels)",
+    "url": "https://www.allthingsdistributed.com/2008/12/eventually_consistent.html"
+   }
+  ],
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/systemdesign?q=Replication%20%26%20Consistency"
+  }
+ },
+ {
+  "id": "consistency-models",
+  "group": "Distributed systems",
+  "name": "Consistency models (linearizability, eventual consistency)",
+  "examples": [
+   "Linearizability",
+   "Sequential consistency",
+   "Causal consistency",
+   "Eventual consistency"
+  ],
+  "summary": "A consistency model is a safety property that defines which results a concurrent or replicated system may return. Models range from linearizable (behaves like one copy) to eventual (replicas converge once writes stop).",
+  "why": "The model tells you which anomalies (stale reads, reordered writes) your code must tolerate, and how available the system can be during a network partition.",
+  "keyIdeas": [
+   "Linearizable: each operation appears to take effect atomically at one point, consistent with real-time order.",
+   "Sequential consistency keeps a single total order that all processes see but drops the real-time requirement.",
+   "Eventual: if no new updates are made, all reads eventually return the last updated value.",
+   "Linearizable and sequential cannot be totally available under partitions; causal and weaker models can be sticky available."
+  ],
+  "links": [
+   {
+    "label": "Jepsen: consistency models map",
+    "url": "https://jepsen.io/consistency/models"
+   },
+   {
+    "label": "Jepsen: linearizability",
+    "url": "https://jepsen.io/consistency/models/linearizable"
+   },
+   {
+    "label": "Eventually Consistent (Vogels)",
+    "url": "https://www.allthingsdistributed.com/2008/12/eventually_consistent.html"
+   }
+  ],
+  "year": "1990",
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/fundamentals?q=consistency%20models"
+  }
+ },
+ {
+  "id": "lamport-hybrid-logical-clocks",
+  "group": "Distributed systems",
+  "name": "Clocks (Lamport, hybrid logical clocks)",
+  "examples": [
+   "Lamport clocks",
+   "Vector clocks",
+   "Hybrid logical clocks (HLC)",
+   "NTP physical clocks"
+  ],
+  "summary": "Machines cannot agree exactly on physical time, so distributed systems order events with logical clocks. Lamport clocks capture happened-before; hybrid logical clocks add closeness to physical time.",
+  "why": "Correct event ordering underpins snapshots, transaction ordering and conflict resolution; trusting wall clocks alone can misorder causally related events.",
+  "keyIdeas": [
+   "Lamport: increment the counter between local events; on receive, set it above both the local value and the message's.",
+   "Guarantee: if a happened before b then C(a) < C(b), but the converse does not hold (concurrent events can be ordered).",
+   "Vector clocks capture concurrency exactly but need space proportional to the number of nodes.",
+   "HLC keeps a pair (l, c): l tracks the max physical time seen, c breaks ties; it stays close to NTP and fits in 64 bits."
+  ],
+  "links": [
+   {
+    "label": "Time, Clocks, and the Ordering of Events (Lamport)",
+    "url": "https://lamport.azurewebsites.net/pubs/time-clocks.pdf"
+   },
+   {
+    "label": "Hybrid logical clocks (Kulkarni et al.)",
+    "url": "https://cse.buffalo.edu/tech-reports/2014-04.pdf"
+   }
+  ],
+  "year": "1978",
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/fundamentals?q=Lamport"
+  }
+ },
+ {
+  "id": "deterministic-simulation-testing",
+  "group": "Distributed systems",
+  "name": "Deterministic simulation testing",
+  "examples": [
+   "FoundationDB simulation",
+   "TigerBeetle VOPR",
+   "Antithesis",
+   "Swizzle-clogging"
+  ],
+  "summary": "Run a whole cluster (real code) in one deterministic process with simulated network, disk and time, inject faults, and check invariants. Because every run is deterministic, any failure can be replayed exactly.",
+  "why": "Rare distributed bugs (partitions, crashes, slow disks) become reproducible and debuggable, instead of flaky failures that cannot be re-triggered.",
+  "keyIdeas": [
+   "All nondeterminism (network, storage, time) goes through simulated interfaces, so a run is perfectly repeatable.",
+   "Faults are injected aggressively: dropped or delayed messages, machine reboots, storage faults, whole-datacenter loss.",
+   "Simulated time can run faster than real time: TigerBeetle reports its VOPR at about 1000x speed.",
+   "Antithesis applies the idea to real software by running it in a fully deterministic environment with injected faults."
+  ],
+  "links": [
+   {
+    "label": "FoundationDB: simulation and testing",
+    "url": "https://apple.github.io/foundationdb/testing.html"
+   },
+   {
+    "label": "TigerBeetle: safety and the VOPR",
+    "url": "https://docs.tigerbeetle.com/concepts/safety/"
+   },
+   {
+    "label": "Antithesis: how it works",
+    "url": "https://antithesis.com/docs/introduction/how_antithesis_works/"
+   }
+  ]
+ },
+ {
+  "id": "jepsen-fault-testing",
+  "group": "Distributed systems",
+  "name": "Jepsen-style fault testing",
+  "examples": [
+   "Jepsen (Clojure library)",
+   "Nemesis fault injection",
+   "Elle isolation checker",
+   "Network partitions via iptables"
+  ],
+  "summary": "Opaque-box testing of real binaries on a real cluster: clients run random operations while a nemesis injects faults, and the recorded history is checked against the consistency model the system claims.",
+  "why": "It finds lost writes, stale reads and isolation violations that only appear under partitions, crashes and clock skew, which unit tests on a healthy cluster miss.",
+  "keyIdeas": [
+   "A control node sets up DB nodes over SSH and runs clients against them; a generator produces operations and nemesis faults.",
+   "Faults include network partitions, killed processes and unsynchronized clocks.",
+   "Every operation's start and completion is recorded; a checker verifies the concurrent history afterward.",
+   "Elle infers transactional isolation anomalies from experimentally observed histories."
+  ],
+  "links": [
+   {
+    "label": "Jepsen analyses and techniques",
+    "url": "https://jepsen.io/analyses"
+   },
+   {
+    "label": "Jepsen library (GitHub)",
+    "url": "https://github.com/jepsen-io/jepsen"
+   },
+   {
+    "label": "Elle paper (arXiv)",
+    "url": "https://arxiv.org/abs/2003.10554"
+   }
+  ]
+ },
+ {
+  "id": "gpu-programming-model",
+  "group": "GPU & accelerators",
+  "name": "CUDA / Metal programming model (warps, threads, blocks)",
+  "examples": [
+   "CUDA grid, thread block, warp",
+   "Metal grid, threadgroup, SIMD-group",
+   "__syncthreads / threadgroup_barrier",
+   "Thread block clusters"
+  ],
+  "summary": "A kernel launch starts many threads running the same code. Threads are grouped into blocks (Metal: threadgroups) that run on one SM or compute unit, and blocks form a grid. Hardware executes threads in warps of 32 on NVIDIA.",
+  "why": "Block size, divergence and synchronization rules determine occupancy and correctness; code that assumes cross-block ordering can deadlock or race.",
+  "keyIdeas": [
+   "NVIDIA warps are 32 threads running the same code; threads taking different branches cause warp divergence.",
+   "A block runs on one SM and shares on-chip shared memory; blocks run in any order and generally cannot sync, except within a cluster.",
+   "Max threads per block is a device property (maxThreadsPerBlock); the CUDA guide example device allows 1024.",
+   "Metal's SIMD-group is the warp equivalent; query its width (threadExecutionWidth) instead of assuming a size."
+  ],
+  "links": [
+   {
+    "label": "CUDA Programming Guide: programming model",
+    "url": "https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html"
+   },
+   {
+    "label": "Metal Shading Language spec (PDF)",
+    "url": "https://developer.apple.com/metal/Metal-Shading-Language-Specification.pdf"
+   }
+  ]
+ },
+ {
+  "id": "gpu-memory-hierarchy-coalescing",
+  "group": "GPU & accelerators",
+  "name": "GPU memory hierarchy and coalescing",
+  "examples": [
+   "Registers, shared memory, global memory",
+   "32-byte global memory transactions",
+   "Shared memory bank conflicts",
+   "Padding a 32x32 tile to 32x33"
+  ],
+  "summary": "GPU memory ranges from per-thread registers to fast on-chip shared memory to large, high-latency global memory. Coalescing means a warp's global accesses are merged into as few 32-byte transactions as possible.",
+  "why": "Most kernels are limited by memory bandwidth; uncoalesced or bank-conflicted access can waste most of each memory transaction and stall the warp.",
+  "keyIdeas": [
+   "Coalesce: consecutive threads should access consecutive addresses so a warp uses every byte of each 32-byte fetch.",
+   "Strided access (32 bytes or more apart) needs a transaction per thread; the CUDA guide example drops to 12.5% use.",
+   "Shared memory is on-chip, with much higher bandwidth and lower latency than global memory; use it to stage reused data.",
+   "Shared memory has 32 banks; different addresses in the same bank serialize, which padding often fixes."
+  ],
+  "links": [
+   {
+    "label": "CUDA Guide: writing kernels (coalescing, banks)",
+    "url": "https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/writing-cuda-kernels.html"
+   },
+   {
+    "label": "CUDA C++ Best Practices Guide",
+    "url": "https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html"
+   }
+  ],
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/systemdesign?q=GPU%20Memory%20Hierarchy%20(SRAM%20vs%20HBM)"
+  }
+ },
+ {
+  "id": "kernel-fusion",
+  "group": "GPU & accelerators",
+  "name": "Kernel fusion",
+  "examples": [
+   "torch.compile (TorchInductor)",
+   "Fused pointwise ops",
+   "FlashAttention",
+   "IO-aware tiling (HBM vs SRAM)"
+  ],
+  "summary": "Combine several operations into one GPU kernel so intermediate results stay on-chip instead of being written to and re-read from global memory (HBM) between separate kernel launches.",
+  "why": "Pointwise ops are usually memory-bound, so cutting HBM round trips and kernel launches often speeds them up without changing the math.",
+  "keyIdeas": [
+   "Eager PyTorch launches one kernel per op, each loading its inputs from memory; a fused kernel loads once.",
+   "torch.compile uses TorchInductor to fuse kernels automatically, especially chains of pointwise ops.",
+   "FlashAttention fuses attention with tiling, needing fewer HBM reads and writes than standard attention.",
+   "Fusion is IO-aware design: count bytes moved between HBM and on-chip SRAM, not just FLOPs."
+  ],
+  "links": [
+   {
+    "label": "PyTorch performance tuning guide",
+    "url": "https://docs.pytorch.org/tutorials/recipes/recipes/tuning_guide.html"
+   },
+   {
+    "label": "FlashAttention paper (arXiv)",
+    "url": "https://arxiv.org/abs/2205.14135"
+   }
+  ],
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/systemdesign?q=Kernel%20Fusion"
+  }
+ },
+ {
+  "id": "triton-kernels",
+  "group": "GPU & accelerators",
+  "name": "Triton kernels",
+  "examples": [
+   "@triton.jit",
+   "tl.program_id, tl.load with mask",
+   "BLOCK_SIZE as tl.constexpr",
+   "tl.arange offsets"
+  ],
+  "summary": "Triton is a Python-embedded language and compiler for GPU kernels where each program instance works on a block (tile) of data, instead of writing per-thread CUDA code.",
+  "why": "It lets you write custom fused kernels near vendor-library speed without hand-managing coalescing and shared memory, which the compiler handles.",
+  "keyIdeas": [
+   "Model: CUDA is scalar program, blocked threads; Triton is blocked program, scalar threads.",
+   "Each program gets its index from tl.program_id and loads a tile with tl.load, using a mask for out-of-bounds lanes.",
+   "The compiler automates memory coalescing and shared memory allocation and synchronization.",
+   "The 2019 paper showed tile-based matmul and convolution on par with cuBLAS and cuDNN."
+  ],
+  "links": [
+   {
+    "label": "Triton docs: introduction",
+    "url": "https://triton-lang.org/main/programming-guide/chapter-1/introduction.html"
+   },
+   {
+    "label": "Triton tutorial: vector add",
+    "url": "https://triton-lang.org/main/getting-started/tutorials/01-vector-add.html"
+   },
+   {
+    "label": "Triton paper (MAPL 2019)",
+    "url": "https://www.eecs.harvard.edu/~htk/publication/2019-mapl-tillet-kung-cox.pdf"
+   }
+  ],
+  "year": "2019"
+ },
+ {
+  "id": "gpu-memory-allocators",
+  "group": "GPU & accelerators",
+  "name": "GPU memory allocators and suballocation",
+  "examples": [
+   "PyTorch CUDA caching allocator",
+   "cudaMallocAsync / memory pools",
+   "expandable_segments",
+   "memory_allocated vs memory_reserved"
+  ],
+  "summary": "Instead of calling the driver for every tensor, allocators reserve large GPU segments and carve (suballocate) them into blocks, reusing freed blocks. PyTorch's caching allocator and CUDA's stream-ordered pools both work this way.",
+  "why": "cudaMalloc and cudaFree synchronize across all streams, so caching and pooling avoid stalls; fragmentation in the cache is a common cause of out-of-memory errors.",
+  "keyIdeas": [
+   "PyTorch caches freed memory: nvidia-smi still shows it as used; memory_reserved includes cache, memory_allocated does not.",
+   "empty_cache() releases only unused cached memory; memory held by live tensors stays allocated.",
+   "Fragmentation fixes: expandable_segments grows one segment per stream; max_split_size_mb limits block splitting.",
+   "cudaMallocAsync allocates from a stream-ordered pool; a release threshold controls when memory returns to the OS."
+  ],
+  "links": [
+   {
+    "label": "PyTorch CUDA semantics: memory management",
+    "url": "https://docs.pytorch.org/docs/stable/notes/cuda.html"
+   },
+   {
+    "label": "CUDA Guide: stream-ordered memory allocator",
+    "url": "https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/stream-ordered-memory-allocation.html"
+   }
+  ]
+ },
+ {
+  "id": "cxl-memory-disaggregation",
+  "group": "Current & upcoming research",
+  "name": "CXL and memory disaggregation",
+  "examples": [
+   "CXL 2.0 memory pooling",
+   "CXL 3.0 memory sharing and fabrics",
+   "Pond (CXL memory pooling for cloud VMs)",
+   "Linux CXL Type-3 memory expander driver"
+  ],
+  "summary": "Compute Express Link (CXL) is a cache-coherent interconnect layered on PCIe that lets CPUs reach device-attached memory with ordinary loads and stores, so memory can be expanded, pooled across hosts, or shared.",
+  "why": "DRAM is a major server cost and is often stranded on one host; CXL lets operators add capacity or pool it across hosts without changing applications.",
+  "keyIdeas": [
+   "Three protocols: CXL.io (PCIe-based enumeration/config), CXL.cache (device caches host memory), CXL.mem (host accesses device memory)",
+   "Type-3 memory expanders map capacity into the physical address space via HDM decoders and appear to the OS as far NUMA memory",
+   "2.0 added switching and pooling; 3.0 (2022) added coherent multi-host sharing and fabrics; 4.0 (Nov 2025) doubles rate to 128 GT/s",
+   "Tradeoff: CXL memory has higher latency than local DRAM, so placement policy decides whether pooling pays off (Pond: within 1-5%)"
+  ],
+  "links": [
+   {
+    "label": "CXL 3.0 white paper (CXL Consortium)",
+    "url": "https://computeexpresslink.org/wp-content/uploads/2023/12/CXL_3.0_white-paper_FINAL.pdf"
+   },
+   {
+    "label": "Linux CXL driver: theory of operation",
+    "url": "https://docs.kernel.org/driver-api/cxl/theory-of-operation.html"
+   },
+   {
+    "label": "Pond: CXL-Based Memory Pooling (arXiv)",
+    "url": "https://arxiv.org/abs/2203.00241"
+   }
+  ],
+  "year": "2019"
+ },
+ {
+  "id": "tiered-memory",
+  "group": "Current & upcoming research",
+  "name": "Tiered memory (DRAM + CXL + SSD)",
+  "examples": [
+   "TPP: Transparent Page Placement",
+   "Linux NUMA demotion (mm/memory_tier.c)",
+   "zswap and swap to SSD as the lowest tier"
+  ],
+  "summary": "Tiered memory treats fast local DRAM, slower CXL-attached memory, and SSD-backed swap as one hierarchy, and has the OS move pages between tiers based on how hot they are.",
+  "why": "Capacity tiers are cheaper per GB than local DRAM; good page placement keeps most accesses in the fast tier so applications run near all-DRAM speed.",
+  "keyIdeas": [
+   "Demotion: on reclaim, move cold pages to a slower NUMA node instead of swapping them out (Linux demotion_enabled)",
+   "Promotion: detect hot pages stuck in the slow tier and move them back, while limiting sampling and migration overhead",
+   "Tier order comes from firmware performance data (HMAT/CDAT); swap or zswap on SSD sits below the CXL tier",
+   "TPP reports within 1% of all-local memory; most of its patches were merged in Linux 5.18"
+  ],
+  "links": [
+   {
+    "label": "TPP paper (arXiv)",
+    "url": "https://arxiv.org/abs/2206.02878"
+   },
+   {
+    "label": "Linux docs: CXL reclaim and demotion",
+    "url": "https://docs.kernel.org/driver-api/cxl/allocation/reclaim.html"
+   }
+  ],
+  "year": "2022"
+ },
+ {
+  "id": "sched-ext",
+  "group": "Current & upcoming research",
+  "name": "sched_ext (custom Linux schedulers in eBPF)",
+  "examples": [
+   "scx_simple",
+   "scx_rusty",
+   "scx_layered",
+   "scx_rustland"
+  ],
+  "summary": "sched_ext is a Linux scheduler class whose policy is implemented by a BPF program (struct sched_ext_ops) that can be loaded and unloaded at runtime. It was merged in Linux 6.12 (released Nov 2024).",
+  "why": "Scheduling policy can be experimented with and tailored per workload in production without patching or rebooting the kernel.",
+  "keyIdeas": [
+   "Tasks flow through dispatch queues (DSQs): a global FIFO, a local DSQ per CPU, plus custom FIFO or vtime-ordered DSQs",
+   "Safety net: on a BPF error, a stalled runnable task, or SysRq-S, the kernel unloads it and reverts tasks to the fair scheduler",
+   "Needs CONFIG_SCHED_CLASS_EXT plus BPF and BTF support; schedulers can be written in C or Rust (sched-ext/scx repo)"
+  ],
+  "links": [
+   {
+    "label": "Kernel docs: Extensible Scheduler Class",
+    "url": "https://docs.kernel.org/scheduler/sched-ext.html"
+   },
+   {
+    "label": "sched-ext/scx schedulers repo",
+    "url": "https://github.com/sched-ext/scx"
+   },
+   {
+    "label": "Phoronix: sched_ext merged for 6.12",
+    "url": "https://www.phoronix.com/news/Linux-6.12-Lands-sched-ext"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "rust-in-linux-kernel",
+  "group": "Current & upcoming research",
+  "name": "Rust in the Linux kernel",
+  "examples": [
+   "Android Binder driver (merged for 6.18)",
+   "Nova NVIDIA GPU driver",
+   "Tyr GPU driver",
+   "Rust null block driver"
+  ],
+  "summary": "Rust support was merged in Linux 6.1 (2022) as an experiment for writing drivers in a memory-safe language. At the 2025 Maintainers Summit the experiment was declared concluded: Rust is here to stay.",
+  "why": "Many kernel bugs are memory-safety errors; safe Rust rules out most of them at compile time in new driver code.",
+  "keyIdeas": [
+   "bindgen generates raw bindings from C headers; hand-written safe abstractions in the kernel crate wrap them",
+   "Leaf code such as drivers must not call C bindings directly: unsafe code is confined to subsystem abstractions",
+   "Abstractions map C acquire/release to constructors/destructors and C error codes to Result"
+  ],
+  "links": [
+   {
+    "label": "Kernel docs: Rust general information",
+    "url": "https://docs.kernel.org/rust/general-information.html"
+   },
+   {
+    "label": "Rust for Linux project",
+    "url": "https://rust-for-linux.com/"
+   },
+   {
+    "label": "Patch: rust: conclude the Rust experiment",
+    "url": "https://lkml.iu.edu/2512.1/06000.html"
+   }
+  ],
+  "year": "2022"
+ },
+ {
+  "id": "unikernels",
+  "group": "Current & upcoming research",
+  "name": "Unikernels",
+  "examples": [
+   "MirageOS (OCaml)",
+   "Unikraft"
+  ],
+  "summary": "A unikernel compiles one application together with only the OS library components it needs into a single-purpose, single-address-space image that boots directly on a hypervisor.",
+  "why": "Removing the general-purpose OS shrinks image size, boot time, and attack surface, which suits short-lived cloud and serverless workloads.",
+  "keyIdeas": [
+   "Library OS: kernel services are linked in as libraries and specialized at compile time; no separate user/kernel split",
+   "The hypervisor supplies isolation and a stable virtual hardware interface, so only simple virtual device drivers are needed",
+   "Unikraft: ~1MB images, under 10MB RAM, ~1ms boot beyond VMM time, 1.7x-2.7x faster than Linux guests for nginx/SQLite/Redis",
+   "Main cost: porting effort and a less familiar debugging and operations model"
+  ],
+  "links": [
+   {
+    "label": "Unikernels: Library OSes for the Cloud (ASPLOS 2013)",
+    "url": "https://sites.cs.ucsb.edu/~rich/class/cs270/papers/unikernel.pdf"
+   },
+   {
+    "label": "Unikraft paper (arXiv)",
+    "url": "https://arxiv.org/abs/2104.12721"
+   },
+   {
+    "label": "MirageOS",
+    "url": "https://mirage.io/"
+   }
+  ],
+  "year": "2013"
+ },
+ {
+  "id": "persistent-memory-data-structures",
+  "group": "Current & upcoming research",
+  "name": "Persistent memory data structures",
+  "examples": [
+   "PMDK libpmemobj (transactional object store)",
+   "RECIPE (SOSP 2019)",
+   "libpmem flush primitives"
+  ],
+  "summary": "Byte-addressable persistent memory is accessed with loads and stores via DAX mappings, so data structures must stay crash-consistent when power fails mid-update. Intel ended Optane development in 2022.",
+  "why": "Teaches crash consistency at cache-line granularity; the same ideas reappear in CXL-attached persistent memory and fast storage designs.",
+  "keyIdeas": [
+   "Stores sit in volatile CPU caches until flushed (CLWB/CLFLUSH) and ordered with fences, unless the platform has eADR",
+   "libpmemobj adds transactions and a persistent allocator so updates are all-or-nothing across crashes",
+   "RECIPE: some concurrent DRAM indexes become crash-consistent PM indexes with 30-200 lines of changes",
+   "Status: Intel stopped new PMDK feature work in 2022; the repo now lives at daos-stack/pmdk"
+  ],
+  "links": [
+   {
+    "label": "PMDK overview (pmem.io)",
+    "url": "https://pmem.io/pmdk/"
+   },
+   {
+    "label": "Update on PMDK long-term support (2022)",
+    "url": "https://pmem.io/blog/2022/11/update-on-pmdk-and-our-long-term-support-strategy/"
+   },
+   {
+    "label": "RECIPE paper (arXiv)",
+    "url": "https://arxiv.org/abs/1909.13670"
+   }
+  ],
+  "year": "2019"
+ },
+ {
+  "id": "formal-verification-systems",
+  "group": "Current & upcoming research",
+  "name": "Formal verification of systems code (TLA+, Verus)",
+  "examples": [
+   "TLA+ with the TLC model checker",
+   "TLAPS proof system",
+   "TLA+ at AWS (CACM 2015)",
+   "Verus (verified Rust)"
+  ],
+  "summary": "TLA+ specifies a concurrent or distributed design as math and model-checks it for safety and liveness bugs; Verus proves that Rust implementation code meets its specification for all executions using SMT solvers.",
+  "why": "Concurrency and distributed-protocol bugs hide in rare interleavings that tests miss; verification finds them before they ship.",
+  "keyIdeas": [
+   "TLA+ checks the design, not the code: TLC explores reachable states, TLAPS proves properties",
+   "AWS reported TLA+ on 10 large systems either found subtle bugs or gave confidence for aggressive optimizations",
+   "Verus writes specs and proofs in Rust; ghost permissions use Rust's linear types and borrow checker for pointers and concurrency",
+   "Cost: writing specs and proofs takes effort, and guarantees only cover what the spec states"
+  ],
+  "links": [
+   {
+    "label": "The TLA+ Home Page (Lamport)",
+    "url": "https://lamport.azurewebsites.net/tla/tla.html"
+   },
+   {
+    "label": "How AWS Uses Formal Methods (CACM 2015)",
+    "url": "https://ilyasergey.net/CS6213/_static/01-intro/aws.pdf"
+   },
+   {
+    "label": "Verus repository",
+    "url": "https://github.com/verus-lang/verus"
+   }
+  ],
+  "year": "2015"
+ },
+ {
+  "id": "ml-for-systems",
+  "group": "Current & upcoming research",
+  "name": "ML-for-systems (learned scheduling, learned caching)",
+  "examples": [
+   "The Case for Learned Index Structures (2018)",
+   "Decima: learned cluster scheduling (2019)",
+   "LRB: Learning Relaxed Belady (NSDI 2020)"
+  ],
+  "summary": "ML-for-systems replaces hand-tuned heuristics inside systems (indexes, schedulers, cache eviction) with models trained on the workload, while keeping enough structure to bound the cost of mistakes.",
+  "why": "Heuristics are tuned for average workloads; models can exploit the specific data and traffic a system actually sees.",
+  "keyIdeas": [
+   "Learned index: a model predicts a key's position in sorted data; up to 70% faster than cache-optimized B-trees with ~10x less memory",
+   "Decima: reinforcement learning over job DAGs in Spark cuts average job completion time by at least 21% vs tuned heuristics",
+   "LRB: learns to approximate Belady's optimal eviction for CDN caches, cutting WAN traffic 4-25% on production traces",
+   "Tradeoffs: training and inference cost on the hot path, and behavior under workload shift"
+  ],
+  "links": [
+   {
+    "label": "Learned Index Structures (arXiv)",
+    "url": "https://arxiv.org/abs/1712.01208"
+   },
+   {
+    "label": "Decima (arXiv)",
+    "url": "https://arxiv.org/abs/1810.01963"
+   },
+   {
+    "label": "LRB paper (NSDI 2020, PDF)",
+    "url": "https://www.usenix.org/system/files/nsdi20-paper-song.pdf"
+   }
+  ],
+  "year": "2018"
+ },
+ {
+  "id": "llm-inference-kv-cache",
+  "group": "Current & upcoming research",
+  "name": "LLM inference systems (KV-cache memory management, PagedAttention)",
+  "examples": [
+   "vLLM",
+   "PagedAttention (SOSP 2023)"
+  ],
+  "summary": "LLM serving keeps a key-value (KV) cache per request that grows token by token. PagedAttention stores it in fixed-size blocks mapped through a per-request block table, like OS virtual memory pages.",
+  "why": "KV-cache memory limits batch size and so throughput; earlier systems used only 20.4%-38.2% of KV memory for actual token state.",
+  "keyIdeas": [
+   "Contiguous max-length reservation wastes memory on reserved slots, internal fragmentation and external fragmentation",
+   "Blocks are allocated on demand and can be non-contiguous, so waste is limited to the last partly filled block",
+   "Blocks can be shared across sequences (parallel sampling, beam search, shared prefixes) with copy-on-write",
+   "vLLM reports 2-4x throughput over FasterTransformer and Orca at the same latency"
+  ],
+  "links": [
+   {
+    "label": "PagedAttention / vLLM paper (arXiv)",
+    "url": "https://arxiv.org/abs/2309.06180"
+   },
+   {
+    "label": "vLLM repository",
+    "url": "https://github.com/vllm-project/vllm"
+   }
+  ],
+  "year": "2023",
+  "inApp": {
+   "label": "Deep dive in DevDump",
+   "url": "/systemdesign?q=PagedAttention%20%2F%20vLLM"
+  }
+ },
+ {
+  "id": "vector-database-internals",
+  "group": "Current & upcoming research",
+  "name": "Vector database internals (SIMD distance kernels, disk-based ANN)",
+  "examples": [
+   "DiskANN / Vamana graph (NeurIPS 2019)",
+   "Faiss (IVF, PQ, fast-scan)",
+   "HNSW (in-memory graph baseline)"
+  ],
+  "summary": "Vector databases answer approximate nearest-neighbor (ANN) queries over high-dimensional embeddings, combining compressed codes, graph or cluster indexes, and SIMD-optimized distance computation.",
+  "why": "Embedding search underpins retrieval and recommendation; cost is dominated by distance math and by memory or SSD bandwidth.",
+  "keyIdeas": [
+   "Faiss distance kernels use AVX/AVX2/AVX512 and NEON; 4-bit PQ fast-scan keeps lookup tables in SIMD registers",
+   "DiskANN keeps PQ-compressed vectors in RAM and stores the graph plus full-precision vectors on SSD",
+   "Beam search fetches several neighborhoods per SSD round trip; full vectors read alongside are used to re-rank",
+   "DiskANN: 1B points on a 64GB-RAM machine, over 5,000 QPS, under 3ms mean latency, 95%+ 1-recall@1 on SIFT1B"
+  ],
+  "links": [
+   {
+    "label": "DiskANN paper (NeurIPS 2019)",
+    "url": "https://papers.nips.cc/paper/2019/hash/09853c7fb1d3f8ee67a61b6bf4a7f8e6-Abstract.html"
+   },
+   {
+    "label": "The Faiss library (arXiv)",
+    "url": "https://arxiv.org/abs/2401.08281"
+   },
+   {
+    "label": "DiskANN repository",
+    "url": "https://github.com/microsoft/DiskANN"
+   }
+  ],
+  "year": "2019",
+  "inApp": {
+   "label": "Related in ML Research",
+   "url": "/ml-research?q=DiskANN"
+  }
+ }
+]
