@@ -2587,5 +2587,479 @@
     "url": "https://platform.claude.com/docs/en/build-with-claude/batch-processing"
    }
   ]
+ },
+ {
+  "id": "clip-image-embeddings",
+  "group": "Vision",
+  "name": "CLIP and image embeddings",
+  "examples": [
+   "OpenAI CLIP",
+   "open_clip",
+   "SigLIP",
+   "FAISS (vector index)"
+  ],
+  "summary": "CLIP trains an image encoder and a text encoder together so matching images and captions land close in one vector space. Each image becomes a fixed-length embedding you can compare by cosine similarity.",
+  "why": "Embeddings turn fuzzy matching (is this the same lost backpack? find photos of red birds) into nearest-neighbor search over vectors, with no task-specific labels.",
+  "keyIdeas": [
+   "Contrastive pre-training: predict which caption goes with which image, on 400M web (image, text) pairs",
+   "model.encode_image gives a vector; compare vectors by cosine similarity, index them for fast nearest-neighbor search",
+   "Images and text share the space, so a text query can retrieve images and vice versa",
+   "SigLIP swaps the softmax contrastive loss for a pairwise sigmoid loss, which works well at smaller batch sizes"
+  ],
+  "links": [
+   {
+    "label": "CLIP paper (arXiv)",
+    "url": "https://arxiv.org/abs/2103.00020"
+   },
+   {
+    "label": "openai/CLIP repo",
+    "url": "https://github.com/openai/CLIP"
+   },
+   {
+    "label": "open_clip repo",
+    "url": "https://github.com/mlfoundations/open_clip"
+   }
+  ],
+  "year": "2021"
+ },
+ {
+  "id": "zero-shot-classification",
+  "group": "Vision",
+  "name": "Zero-shot classification",
+  "examples": [
+   "CLIP",
+   "SigLIP",
+   "Hugging Face zero-shot-image-classification pipeline"
+  ],
+  "summary": "Classify an image into labels you choose at runtime, with no training: embed the image and a text prompt per label, then pick the label whose text embedding is most similar.",
+  "why": "You can ship a classifier (bird species, receipt vs not receipt) on day one and change labels by editing a list, before collecting any labeled data.",
+  "keyIdeas": [
+   "Labels are written as prompts, e.g. 'This is a photo of {label}.'; prompt wording affects accuracy",
+   "CLIP scores are a softmax over only the labels you pass, so it always picks one; SigLIP scores each label independently with a sigmoid",
+   "CLIP matched the original ResNet-50 on ImageNet zero-shot without using its 1.28M labeled examples",
+   "Good baseline; fine-tune when you have labeled data and need higher accuracy on a narrow domain"
+  ],
+  "links": [
+   {
+    "label": "HF zero-shot image classification guide",
+    "url": "https://huggingface.co/docs/transformers/tasks/zero_shot_image_classification"
+   },
+   {
+    "label": "CLIP paper (arXiv)",
+    "url": "https://arxiv.org/abs/2103.00020"
+   }
+  ],
+  "year": "2021"
+ },
+ {
+  "id": "vision-fine-tuning",
+  "group": "Vision",
+  "name": "Fine-tuning a vision model (ViT)",
+  "examples": [
+   "google/vit-base-patch16-224-in21k",
+   "Hugging Face Transformers Trainer",
+   "timm"
+  ],
+  "summary": "Start from a model pretrained on a large image dataset and continue training it on your own labeled images so it learns your specific classes. ViT is a pure transformer that treats an image as a sequence of patches.",
+  "why": "Reusing a pretrained backbone lets a modest labeled set teach your own classes (say, the birds at your feeder) without the data and compute of training from scratch.",
+  "keyIdeas": [
+   "ViT splits the image into fixed-size patches (16x16 in the paper title) and runs a standard transformer over them",
+   "Transfer learning: pretrain on large data, then fine-tune on a smaller target dataset with a new classification head",
+   "Data augmentation (random crops, flips) reduces overfitting on small datasets",
+   "Image preprocessing (resize, normalize) must match what the checkpoint was trained with"
+  ],
+  "links": [
+   {
+    "label": "ViT paper (arXiv)",
+    "url": "https://arxiv.org/abs/2010.11929"
+   },
+   {
+    "label": "HF image classification fine-tuning guide",
+    "url": "https://huggingface.co/docs/transformers/tasks/image_classification"
+   }
+  ],
+  "year": "2020"
+ },
+ {
+  "id": "object-detection-counting",
+  "group": "Vision",
+  "name": "Object detection and counting",
+  "examples": [
+   "Ultralytics YOLO",
+   "OWL-ViT (open-vocabulary detection)",
+   "Ultralytics object counting solution"
+  ],
+  "summary": "Object detection finds every instance of known classes in an image and returns a bounding box, class, and confidence for each. Counting builds on it by tallying detections, often with tracking across video frames.",
+  "why": "Classification says 'there is a bird'; detection says where each bird is and how many, which is what counting, cropping, and alerts actually need.",
+  "keyIdeas": [
+   "YOLO frames detection as one network predicting boxes and class probabilities in a single pass, fast enough for real time",
+   "Single-pass speed comes with some localization errors versus slower detectors; tune the confidence threshold",
+   "For video counts, track objects across frames and count line crossings or objects inside a region, not raw per-frame boxes",
+   "Open-vocabulary detectors like OWL-ViT find objects from text queries without training on those classes"
+  ],
+  "links": [
+   {
+    "label": "YOLO paper (arXiv)",
+    "url": "https://arxiv.org/abs/1506.02640"
+   },
+   {
+    "label": "Ultralytics object counting guide",
+    "url": "https://docs.ultralytics.com/guides/object-counting/"
+   },
+   {
+    "label": "OWL-ViT paper (arXiv)",
+    "url": "https://arxiv.org/abs/2205.06230"
+   }
+  ],
+  "year": "2015"
+ },
+ {
+  "id": "ocr-document-understanding",
+  "group": "Vision",
+  "name": "OCR and document understanding",
+  "examples": [
+   "Tesseract",
+   "PaddleOCR (PP-OCR, PP-StructureV3)",
+   "Donut"
+  ],
+  "summary": "OCR converts text in images into machine-readable strings, usually by detecting text regions and then recognizing characters. Document understanding goes further and extracts structure, such as fields, tables, and layout.",
+  "why": "A receipt scanner needs both: OCR to read the characters and a structure step to know which number is the total and which is the date.",
+  "keyIdeas": [
+   "Classic pipeline: OCR engine reads text, then rules or a model map text to fields; OCR errors propagate downstream",
+   "Tesseract (5.x, LSTM-based) is a CLI and library for printed text with no built-in GUI",
+   "PaddleOCR adds text detection, multilingual recognition, and conversion of PDFs and images to Markdown or JSON",
+   "OCR-free models like Donut map the document image directly to structured output, skipping the separate OCR step"
+  ],
+  "links": [
+   {
+    "label": "Tesseract user manual",
+    "url": "https://tesseract-ocr.github.io/tessdoc/"
+   },
+   {
+    "label": "PaddleOCR repo",
+    "url": "https://github.com/PaddlePaddle/PaddleOCR"
+   },
+   {
+    "label": "Donut paper (arXiv)",
+    "url": "https://arxiv.org/abs/2111.15664"
+   }
+  ]
+ },
+ {
+  "id": "vlm-reading-images",
+  "group": "Vision",
+  "name": "Vision-language models for reading images",
+  "examples": [
+   "LLaVA",
+   "SmolVLM",
+   "Hugging Face image-text-to-text pipeline"
+  ],
+  "summary": "A vision-language model (VLM) is a language model that also takes images as input, so you can ask open-ended questions about a photo or document and get text back.",
+  "why": "One prompt can replace a custom pipeline for tasks like 'describe this lost item' or 'return this receipt as JSON', at the cost of more compute and less predictable output.",
+  "keyIdeas": [
+   "Architecture: a vision encoder feeds image features into an LLM, which generates the answer as text",
+   "LLaVA showed instruction tuning on GPT-4-generated image-instruction data yields general visual chat ability",
+   "Variants include base, chat, and instruction-tuned models; use instruction-tuned ones for app tasks",
+   "Outputs are generated text, so validate structured results (parse JSON, check totals) instead of trusting them blindly"
+  ],
+  "links": [
+   {
+    "label": "LLaVA paper (arXiv)",
+    "url": "https://arxiv.org/abs/2304.08485"
+   },
+   {
+    "label": "HF image-text-to-text guide",
+    "url": "https://huggingface.co/docs/transformers/tasks/image_text_to_text"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "pose-estimation",
+  "group": "Vision",
+  "name": "Pose estimation",
+  "examples": [
+   "MediaPipe Pose Landmarker",
+   "BlazePose",
+   "Ultralytics YOLO pose models"
+  ],
+  "summary": "Pose estimation locates keypoints such as joints on a body in an image or video, returning their coordinates with confidence scores, so you can reason about posture and movement.",
+  "why": "Keypoints are a compact signal for fitness rep counting, posture checks, or gesture input, and are far easier to write logic against than raw pixels.",
+  "keyIdeas": [
+   "Output is a set of keypoints, each 2D (x, y) or 3D (x, y, z), with a visibility flag or confidence",
+   "MediaPipe Pose Landmarker returns 33 body landmarks in image coordinates and 3D world coordinates",
+   "BlazePose is built for on-device real time: 33 keypoints for a single person at over 30 FPS on a Pixel 2",
+   "Two-stage design: detect the body first, then predict detailed landmarks on that region"
+  ],
+  "links": [
+   {
+    "label": "MediaPipe Pose Landmarker docs",
+    "url": "https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker"
+   },
+   {
+    "label": "BlazePose paper (arXiv)",
+    "url": "https://arxiv.org/abs/2006.10204"
+   },
+   {
+    "label": "Ultralytics pose task docs",
+    "url": "https://docs.ultralytics.com/tasks/pose/"
+   }
+  ]
+ },
+ {
+  "id": "near-duplicate-image-search",
+  "group": "Vision",
+  "name": "Near-duplicate image search (perceptual hashing)",
+  "examples": [
+   "imagehash (Python)",
+   "pHash (C++)",
+   "aHash, dHash, wHash variants"
+  ],
+  "summary": "A perceptual hash turns an image into a short fingerprint where visually similar images get similar hashes, unlike MD5 or SHA-1 where any tiny change produces a completely different hash.",
+  "why": "It cheaply catches re-uploads, resized or recompressed copies, and burst-shot duplicates before you spend compute on embeddings or storage.",
+  "keyIdeas": [
+   "Compare hashes by Hamming distance (number of differing bits); a small distance means nearly identical images",
+   "pHash: shrink to grayscale, take a 2D DCT, keep low frequencies, set each bit by comparing to the median",
+   "Larger hash size captures more detail and is more sensitive to changes",
+   "Finds near-identical copies, not semantically similar photos; use embeddings like CLIP for 'same kind of thing'"
+  ],
+  "links": [
+   {
+    "label": "imagehash repo",
+    "url": "https://github.com/JohannesBuchner/imagehash"
+   },
+   {
+    "label": "pHash.org",
+    "url": "https://www.phash.org/"
+   }
+  ]
+ },
+ {
+  "id": "speech-to-text",
+  "group": "Audio & language",
+  "name": "Speech-to-text",
+  "examples": [
+   "OpenAI Whisper",
+   "whisper.cpp",
+   "faster-whisper (CTranslate2)"
+  ],
+  "summary": "Converting spoken audio into text. Whisper is a Transformer encoder-decoder trained on 680,000 hours of weakly supervised web audio that also does language ID and speech translation.",
+  "why": "Turns lectures, meetings or voice notes into searchable, indexable text that the rest of your pipeline (search, RAG, summaries) can use.",
+  "keyIdeas": [
+   "Audio is resampled, converted to a log-Mel spectrogram and decoded in 30-second sliding windows",
+   "Model size trades speed for accuracy: Whisper tiny is 39M params, large is 1550M; turbo is a faster large-v3 variant",
+   "Weakly supervised training means it can hallucinate words that were never spoken, worse in low-resource languages",
+   "whisper.cpp runs on CPU (incl. Raspberry Pi) in C/C++ with integer quantization and built-in voice activity detection"
+  ],
+  "links": [
+   {
+    "label": "Whisper paper (arXiv)",
+    "url": "https://arxiv.org/abs/2212.04356"
+   },
+   {
+    "label": "openai/whisper",
+    "url": "https://github.com/openai/whisper"
+   },
+   {
+    "label": "whisper.cpp",
+    "url": "https://github.com/ggml-org/whisper.cpp"
+   }
+  ],
+  "year": "2022"
+ },
+ {
+  "id": "audio-embeddings-classification",
+  "group": "Audio & language",
+  "name": "Audio embeddings and classification",
+  "examples": [
+   "YAMNet",
+   "PANNs",
+   "BirdNET-Analyzer"
+  ],
+  "summary": "Pretrained networks turn short audio clips into fixed-size vectors and class scores (e.g. AudioSet's sound events or bird species), which you can use directly or feed into a small custom classifier.",
+  "why": "Lets a device like a bird feeder or noise monitor recognize sounds without collecting a huge labeled dataset or training a model from scratch.",
+  "keyIdeas": [
+   "Typical input: 16 kHz mono audio turned into log-mel spectrogram patches (YAMNet uses 0.96 s frames)",
+   "YAMNet maps each frame to a 1024-d embedding plus 521 AudioSet class scores, with only 3.7M weights",
+   "Transfer learning: PANNs pretrained on AudioSet were fine-tuned to six other audio tasks",
+   "BirdNET-Analyzer covers 6,000+ species and can extract embeddings, run similarity search and train custom classifiers"
+  ],
+  "links": [
+   {
+    "label": "PANNs paper (arXiv)",
+    "url": "https://arxiv.org/abs/1912.10211"
+   },
+   {
+    "label": "YAMNet",
+    "url": "https://github.com/tensorflow/models/tree/master/research/audioset/yamnet"
+   },
+   {
+    "label": "BirdNET-Analyzer",
+    "url": "https://github.com/birdnet-team/BirdNET-Analyzer"
+   }
+  ],
+  "year": "2019"
+ },
+ {
+  "id": "rag",
+  "group": "Audio & language",
+  "name": "Retrieval-augmented generation (RAG)",
+  "examples": [
+   "FAISS",
+   "pgvector",
+   "Dense retriever + seq2seq generator (Lewis et al.)"
+  ],
+  "summary": "A generator model answers using passages fetched at query time from an external index (non-parametric memory) instead of relying only on knowledge stored in its weights.",
+  "why": "Grounds answers in your own documents, makes it possible to cite sources, and lets you update knowledge by re-indexing instead of retraining.",
+  "keyIdeas": [
+   "Pipeline: chunk documents, embed them, retrieve top-k nearest chunks for a query, condition generation on them",
+   "The original RAG paper used a dense vector index of Wikipedia and a pre-trained neural retriever with a BART generator",
+   "Index hot-swapping: replacing the index updates the model's knowledge with no retraining",
+   "Answer quality is capped by retrieval quality: if the right chunk is not retrieved, the generator cannot use it"
+  ],
+  "links": [
+   {
+    "label": "RAG paper (arXiv)",
+    "url": "https://arxiv.org/abs/2005.11401"
+   },
+   {
+    "label": "FAISS",
+    "url": "https://github.com/facebookresearch/faiss"
+   },
+   {
+    "label": "pgvector",
+    "url": "https://github.com/pgvector/pgvector"
+   }
+  ],
+  "year": "2020"
+ },
+ {
+  "id": "edge-ai",
+  "group": "Edge, data & geo",
+  "name": "Edge AI (distillation and quantization for small devices)",
+  "examples": [
+   "LiteRT (formerly TensorFlow Lite)",
+   "ONNX Runtime quantization",
+   "Knowledge distillation (Hinton et al.)"
+  ],
+  "summary": "Shrinking models to run on phones, microcontrollers or a Raspberry Pi: distillation trains a small student to mimic a large teacher, and quantization stores weights (and often activations) in fewer bits.",
+  "why": "On-device inference cuts latency, bandwidth and cloud cost and keeps working offline, which matters for battery or cellular sensors.",
+  "keyIdeas": [
+   "Distillation: train the student on the teacher's softened outputs (softmax at high temperature T), usually plus true labels",
+   "LiteRT post-training int8 or dynamic-range quantization cuts size up to 75%; float16 up to 50%",
+   "Static quantization needs calibration data to fix activation ranges; dynamic computes them at runtime (slower, often more accurate)",
+   "Quantization-aware training recovers accuracy when post-training quantization loses too much"
+  ],
+  "links": [
+   {
+    "label": "Distillation paper (arXiv)",
+    "url": "https://arxiv.org/abs/1503.02531"
+   },
+   {
+    "label": "LiteRT model optimization",
+    "url": "https://ai.google.dev/edge/litert/models/model_optimization"
+   },
+   {
+    "label": "ONNX Runtime quantization",
+    "url": "https://onnxruntime.ai/docs/performance/model-optimizations/quantization.html"
+   }
+  ],
+  "year": "2015"
+ },
+ {
+  "id": "time-series-forecasting",
+  "group": "Edge, data & geo",
+  "name": "Time-series forecasting",
+  "examples": [
+   "Prophet",
+   "statsmodels (ARIMA, SARIMAX, ExponentialSmoothing)",
+   "Seasonal naive baseline"
+  ],
+  "summary": "Predicting future values of a series (air quality, traffic, demand) from its own history, typically by modeling trend, seasonality and holiday or event effects.",
+  "why": "Powers alerts and planning (tomorrow's AQI, next week's load), and honest backtesting tells you whether a forecast beats a trivial guess.",
+  "keyIdeas": [
+   "Always compare against simple baselines like seasonal naive (repeat last season's value) before using fancier models",
+   "Prophet fits an additive model of non-linear trend plus yearly, weekly and daily seasonality and holidays",
+   "Evaluate with time-series cross-validation: train only on data before each cutoff, never on future observations",
+   "Prophet works best with strong seasonality and several seasons of history"
+  ],
+  "links": [
+   {
+    "label": "FPP3: time series cross-validation",
+    "url": "https://otexts.com/fpp3/tscv.html"
+   },
+   {
+    "label": "Prophet",
+    "url": "https://facebook.github.io/prophet/"
+   },
+   {
+    "label": "statsmodels tsa",
+    "url": "https://www.statsmodels.org/stable/tsa.html"
+   }
+  ]
+ },
+ {
+  "id": "geospatial-indexing",
+  "group": "Edge, data & geo",
+  "name": "Geospatial indexing and geo filters",
+  "examples": [
+   "H3 (Uber)",
+   "S2 Geometry",
+   "PostGIS (GiST index, ST_DWithin)"
+  ],
+  "summary": "Data structures that make location queries fast: discrete global grids (H3 hexagons, S2 cells) map points to cell IDs, and spatial database indexes speed up within-distance and intersection filters.",
+  "why": "Lets a sensor map answer 'readings within 2 km' or 'average per neighborhood cell' without scanning every row.",
+  "keyIdeas": [
+   "H3 is hierarchical: each hexagon has 7 children (pentagons have 6), and parent containment is only approximate geometrically",
+   "Hexagons have 6 equidistant neighbors (squares have two neighbor distances), simplifying smoothing and aggregation",
+   "PostGIS indexes bounding boxes, so queries filter by index first and then run the exact geometry test",
+   "ST_DWithin uses available indexes; on geography types the distance is in meters"
+  ],
+  "links": [
+   {
+    "label": "H3 docs",
+    "url": "https://h3geo.org/docs/"
+   },
+   {
+    "label": "PostGIS ST_DWithin",
+    "url": "https://postgis.net/docs/ST_DWithin.html"
+   },
+   {
+    "label": "S2 Geometry",
+    "url": "http://s2geometry.io/"
+   }
+  ]
+ },
+ {
+  "id": "streaming-sensor-pipelines",
+  "group": "Edge, data & geo",
+  "name": "Streaming sensor pipelines",
+  "examples": [
+   "MQTT brokers",
+   "Apache Kafka",
+   "Apache Flink"
+  ],
+  "summary": "Moving continuous readings from devices to storage and analytics: lightweight pub/sub (MQTT) at the edge, a durable partitioned log (Kafka) in the middle, and windowed stream processing on top.",
+  "why": "Sensors drop offline, send late or duplicate data and burst unpredictably; the right protocol and log design keep the map accurate and the backend stable.",
+  "keyIdeas": [
+   "MQTT is a small-footprint pub/sub protocol with QoS 0 (at most once), 1 (at least once) and 2 (exactly once)",
+   "Kafka keys route events to the same partition, and per-partition order is guaranteed",
+   "Kafka keeps events after consumption for a configured retention, so consumers can replay history",
+   "Window by event time (when the device measured), not arrival time; watermarks decide when a window is complete"
+  ],
+  "links": [
+   {
+    "label": "MQTT",
+    "url": "https://mqtt.org/"
+   },
+   {
+    "label": "Kafka introduction",
+    "url": "https://kafka.apache.org/intro"
+   },
+   {
+    "label": "Flink: timely stream processing",
+    "url": "https://nightlies.apache.org/flink/flink-docs-stable/docs/concepts/time/"
+   }
+  ]
  }
 ]
