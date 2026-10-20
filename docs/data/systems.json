@@ -2251,5 +2251,187 @@
    "label": "Related in ML Research",
    "url": "/ml-research?q=DiskANN"
   }
+ },
+ {
+  "id": "dual-write-migration",
+  "group": "Distributed systems",
+  "name": "Online data migration (dual-write and backfill)",
+  "examples": [
+   "Stripe moving subscriptions from Customer records into their own table",
+   "GitHub Scientist to compare old and new read paths",
+   "Offline backfill jobs over database snapshots (Hadoop, Scalding)"
+  ],
+  "summary": "Moving live data to a new store without downtime: dual-write to old and new, backfill history, switch reads, switch writes, then delete the old path. Each step rolls out incrementally while both stores stay consistent.",
+  "why": "Schema and store changes under production traffic (feature stores, metadata DBs, eval result tables) need a path with no downtime and verifiable consistency.",
+  "keyIdeas": [
+   "Four phases: dual write, move reads to the new store, move writes to the new store, remove old data and code",
+   "Backfill existing rows after dual writes start so both stores converge on identical data",
+   "Verify reads by running both paths and alerting on mismatches (Stripe used GitHub Scientist)",
+   "Run heavy backfills offline on snapshots so production databases are not loaded"
+  ],
+  "links": [
+   {
+    "label": "Stripe: Online migrations at scale",
+    "url": "https://stripe.com/blog/online-migrations"
+   }
+  ]
+ },
+ {
+  "id": "consistent-hashing-hot-keys",
+  "group": "Distributed systems",
+  "name": "Consistent hashing and hot-key mitigation",
+  "examples": [
+   "Amazon Dynamo partitioning ring with virtual nodes",
+   "Consistent hashing with bounded loads (Mirrokni, Thorup, Zadimoghaddam)",
+   "Sharded caches and KV stores keyed by hash ring"
+  ],
+  "summary": "A hash scheme where adding or removing a server remaps only a small fraction of keys, introduced by Karger et al. for web caching to relieve hot spots. Hot keys need extra handling such as replication or load caps.",
+  "why": "Sharding KV caches, prompt caches and request routers across a changing fleet needs minimal key movement and protection from skewed load.",
+  "keyIdeas": [
+   "Keys and servers hash onto a ring; each key goes to the next server clockwise, so membership changes move few keys",
+   "Virtual nodes give each server many ring positions, spreading load and allowing capacity-weighted shares (Dynamo)",
+   "Plain consistent hashing balances no better than random assignment; bounded loads caps each server at about c times average",
+   "Karger et al. also used random trees to spread requests for hot pages across many caches"
+  ],
+  "links": [
+   {
+    "label": "Karger et al.: Consistent Hashing and Random Trees",
+    "url": "https://www.cs.princeton.edu/courses/archive/fall09/cos518/papers/chash.pdf"
+   },
+   {
+    "label": "Consistent Hashing with Bounded Loads",
+    "url": "https://arxiv.org/abs/1608.01350"
+   },
+   {
+    "label": "Amazon Dynamo (SOSP 2007)",
+    "url": "https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf"
+   }
+  ]
+ },
+ {
+  "id": "allocation-trace-replay",
+  "group": "Memory allocators",
+  "name": "Allocation tracing and replay",
+  "examples": [
+   "glibc mtrace with MALLOC_TRACE",
+   "heaptrack and heaptrack_print",
+   "glibc-malloc-trace-utils (trace2wl, trace_run)"
+  ],
+  "summary": "Recording every malloc, realloc and free a program makes, then analyzing the trace or replaying it as a workload against an allocator to measure time and RSS without rerunning the application.",
+  "why": "Allocator choice and fragmentation drive memory use in long-running inference servers; replaying real traces makes allocator comparisons reproducible.",
+  "keyIdeas": [
+   "Capture via hooks or an interposed shared library on the allocation functions, written to a trace file",
+   "Profilers like heaptrack aggregate traces into hotspots, flame graphs and allocation cost over time",
+   "glibc-malloc-trace-utils converts a trace to a workload (trace2wl) and replays it in a simulator (trace_run)",
+   "Replay logs VmSize, VmRSS and ideal RSS, so fragmentation and overhead can be compared across allocators"
+  ],
+  "links": [
+   {
+    "label": "mtrace(3) man page",
+    "url": "https://man7.org/linux/man-pages/man3/mtrace.3.html"
+   },
+   {
+    "label": "heaptrack (KDE)",
+    "url": "https://github.com/KDE/heaptrack"
+   },
+   {
+    "label": "glibc-malloc-trace-utils",
+    "url": "https://pagure.io/glibc-malloc-trace-utils"
+   }
+  ]
+ },
+ {
+  "id": "relational-operators",
+  "group": "Storage & databases",
+  "name": "Relational operators: joins, aggregation and planning",
+  "examples": [
+   "PostgreSQL nested loop, merge and hash join nodes",
+   "EXPLAIN and EXPLAIN ANALYZE plan trees",
+   "PostgreSQL Genetic Query Optimizer for many-way joins"
+  ],
+  "summary": "Queries execute as a tree of operators (scans, joins, sorts, aggregates) chosen by a cost-based planner that enumerates access paths and join strategies and keeps the cheapest plan.",
+  "why": "Metadata stores, eval warehouses and feature pipelines are SQL; reading plans and picking the right join is how slow queries get fixed.",
+  "keyIdeas": [
+   "Nested loop rescans the inner side per outer row; fine with an index on the inner side, slow otherwise",
+   "Merge join walks two inputs sorted on the join key; hash join builds a hash table on one side and probes with the other",
+   "Plans add sort and aggregate nodes; most nodes can also filter rows and project columns",
+   "Planner estimates cost per path; PostgreSQL switches to genetic search at geqo_threshold FROM items (default 12)"
+  ],
+  "links": [
+   {
+    "label": "PostgreSQL: Planner/Optimizer",
+    "url": "https://www.postgresql.org/docs/current/planner-optimizer.html"
+   },
+   {
+    "label": "PostgreSQL: Using EXPLAIN",
+    "url": "https://www.postgresql.org/docs/current/using-explain.html"
+   }
+  ]
+ },
+ {
+  "id": "roofline-model",
+  "group": "GPU & accelerators",
+  "name": "Roofline model and GPU bandwidth measurement",
+  "examples": [
+   "Nsight Compute Speed Of Light roofline charts",
+   "CUDA effective bandwidth: (bytes read + bytes written) / time",
+   "Sustained DRAM bandwidth microbenchmarks (STREAM style)"
+  ],
+  "summary": "A visual bound on attainable performance: the minimum of peak compute and memory bandwidth times operational intensity (flops per DRAM byte). Proposed by Williams, Waterman and Patterson at Berkeley.",
+  "why": "Tells you whether a kernel (decode attention, GEMM, layernorm) is memory or compute bound, and how far it is from the hardware ceiling.",
+  "keyIdeas": [
+   "Diagonal roof is bandwidth times intensity; flat roof is peak flops; they meet at the ridge point",
+   "The ridge point x value is the minimum intensity needed for peak; a far right ridge means peak is hard to reach",
+   "Measure sustainable bandwidth with optimized microbenchmarks, not datasheet numbers alone",
+   "CUDA guide: compare effective bandwidth from bytes moved and kernel time against theoretical bandwidth"
+  ],
+  "links": [
+   {
+    "label": "Roofline tech report (UCB/EECS-2008-134)",
+    "url": "https://www2.eecs.berkeley.edu/Pubs/TechRpts/2008/EECS-2008-134.html"
+   },
+   {
+    "label": "CUDA Best Practices: bandwidth",
+    "url": "https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html"
+   },
+   {
+    "label": "Nsight Compute Profiling Guide",
+    "url": "https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html"
+   }
+  ],
+  "year": "2008"
+ },
+ {
+  "id": "realtime-multiplayer-networking",
+  "group": "I/O & networking",
+  "name": "Real-time multiplayer networking (WebSockets, state sync)",
+  "examples": [
+   "WebSocket protocol (RFC 6455)",
+   "Colyseus schema-based state sync over WebSocket",
+   "Authoritative server with client-side prediction and entity interpolation"
+  ],
+  "summary": "Keeping many clients in sync with shared state at low latency: a persistent bidirectional channel such as WebSocket, an authoritative server, delta state updates, and client-side latency hiding.",
+  "why": "Collaborative and streaming apps (live agents, shared editors, token streaming UIs) rely on persistent connections and efficient state diffs.",
+  "keyIdeas": [
+   "WebSocket starts as an HTTP Upgrade handshake, then exchanges text, binary, ping and close frames on one TCP connection",
+   "Clients must mask frames to the server; servers must not mask frames to clients",
+   "An authoritative server runs the simulation and clients render results, which blocks most cheating",
+   "Send only changed properties at a fixed patch rate; clients predict own input and interpolate others"
+  ],
+  "links": [
+   {
+    "label": "RFC 6455: The WebSocket Protocol",
+    "url": "https://www.rfc-editor.org/rfc/rfc6455"
+   },
+   {
+    "label": "Colyseus: State Synchronization",
+    "url": "https://docs.colyseus.io/state"
+   },
+   {
+    "label": "Gambetta: Client-Server Game Architecture",
+    "url": "https://www.gabrielgambetta.com/client-server-game-architecture.html"
+   }
+  ],
+  "year": "2011"
  }
 ]

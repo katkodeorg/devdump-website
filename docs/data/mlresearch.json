@@ -3061,5 +3061,976 @@
     "url": "https://nightlies.apache.org/flink/flink-docs-stable/docs/concepts/time/"
    }
   ]
+ },
+ {
+  "id": "rl-infra-at-scale",
+  "group": "Post-training & reasoning",
+  "name": "RL post-training infrastructure at scale",
+  "examples": [
+   "verl (HybridFlow)",
+   "NeMo RL",
+   "slime",
+   "Miles"
+  ],
+  "summary": "The systems layer of LLM RL: a rollout engine (vLLM or SGLang) generates samples, a training engine (Megatron, FSDP) updates the policy, and updated weights are synced back to the rollout engines.",
+  "why": "Rollout generation, weight sync and long-tail samples, not the loss function, usually dominate wall-clock time and GPU cost in RL post-training.",
+  "keyIdeas": [
+   "Colocated: trainer and inference engine share GPUs in turn and offload memory; disaggregated: separate GPU pools for each",
+   "Weight sync after each update: resharding (verl 3D-HybridEngine), NCCL or P2P RDMA transfer, delta or sparse refits",
+   "Async or off-policy rollouts decouple generation from training to hide long-tail samples, at the cost of policy staleness",
+   "Environments and rewards plug in as interfaces: custom generate/reward functions, env.step, verifiers, sandboxes"
+  ],
+  "links": [
+   {
+    "label": "HybridFlow paper (verl)",
+    "url": "https://arxiv.org/abs/2409.19256"
+   },
+   {
+    "label": "NeMo RL design and philosophy",
+    "url": "https://github.com/NVIDIA-NeMo/RL/blob/main/docs/design-docs/design-and-philosophy.md"
+   },
+   {
+    "label": "slime customization guide",
+    "url": "https://github.com/THUDM/slime/blob/main/docs/en/get_started/customization.md"
+   }
+  ]
+ },
+ {
+  "id": "nemo-rl",
+  "group": "Post-training & reasoning",
+  "name": "NeMo RL",
+  "examples": [
+   "GRPO/GSPO/DAPO, DPO, SFT, on-policy distillation",
+   "Automodel and Megatron training backends",
+   "vLLM, SGLang and Megatron generation",
+   "NeMo Gym environments"
+  ],
+  "summary": "NVIDIA's open-source post-training library in the NeMo Framework: a Ray-based single controller orchestrates training, generation and reward environments as isolated RL Actors, from 1 GPU to multi-node.",
+  "why": "It is the stack NVIDIA uses to post-train its Nemotron models, with reproducible recipes for RL on large MoE and long-context models.",
+  "keyIdeas": [
+   "Training via NeMo Automodel (PyTorch FSDP2/TP/CP/EP) or Megatron Bridge; generation via vLLM, SGLang or Megatron inference",
+   "RayVirtualCluster places worker groups on GPUs, alone or colocated (training and generation on the same GPUs in turn)",
+   "Environments implement EnvironmentInterface (step returns rewards); multi-turn RL and NeMo Gym integration supported",
+   "Async RL with replay buffers for off-policy training; refit syncs updated weights from trainer to the rollout engine"
+  ],
+  "links": [
+   {
+    "label": "GitHub: NVIDIA-NeMo/RL",
+    "url": "https://github.com/NVIDIA-NeMo/RL"
+   },
+   {
+    "label": "NeMo RL docs",
+    "url": "https://docs.nvidia.com/nemo/rl/latest/index.html"
+   }
+  ],
+  "year": "2025"
+ },
+ {
+  "id": "verl",
+  "group": "Post-training & reasoning",
+  "name": "verl",
+  "examples": [
+   "PPO, GRPO, GSPO, RLOO, REINFORCE++, DAPO",
+   "FSDP/FSDP2/Megatron-LM training",
+   "vLLM/SGLang/HF rollout",
+   "Multi-turn tool-calling agent loops"
+  ],
+  "summary": "RL training library for LLMs initiated by ByteDance Seed and now maintained under verl-project; the open-source version of the HybridFlow paper (EuroSys 2025).",
+  "why": "Used to train DAPO and Seed-Thinking-v1.5; its hybrid-controller design lets new RL dataflows reuse existing training and inference engines.",
+  "keyIdeas": [
+   "Hybrid-controller programming model: express GRPO or PPO dataflows in a few lines over distributed worker groups",
+   "3D-HybridEngine reshards actor weights between training and generation, cutting memory redundancy and communication",
+   "Flexible device mapping places models on different GPU sets; Megatron backend scales MoE models such as DeepSeek-671B",
+   "Function-based (verifiable) and model-based rewards; fully async and one-step off-policy modes under verl.experimental"
+  ],
+  "links": [
+   {
+    "label": "GitHub: verl-project/verl",
+    "url": "https://github.com/verl-project/verl"
+   },
+   {
+    "label": "HybridFlow paper",
+    "url": "https://arxiv.org/abs/2409.19256"
+   },
+   {
+    "label": "verl docs",
+    "url": "https://verl.readthedocs.io/en/latest/"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "slime",
+  "group": "Post-training & reasoning",
+  "name": "slime",
+  "examples": [
+   "RL framework behind the GLM-4.5 to GLM-5.3 releases",
+   "--custom-generate-function-path for agent loops",
+   "--custom-rm-path rewards",
+   "Fully async rollout example"
+  ],
+  "summary": "THUDM's LLM RL-scaling framework that connects Megatron training with SGLang rollout (behind a router) through a shared Data Buffer, with custom data generation interfaces.",
+  "why": "A small, readable stack proven on frontier releases (the GLM family), and the base that Miles, vime and other RL systems build on.",
+  "keyIdeas": [
+   "Three modules: Megatron training, SGLang rollout plus router, and a Data Buffer bridging prompts, rollouts and rewards",
+   "Trainer syncs parameters to rollout after training; colocated mode or separate GPUs, plus delta weight sync",
+   "Megatron args pass through directly; SGLang args use a --sglang- prefix",
+   "Agentic RL plugs in via custom generate and reward functions; fully async rollout handles long-tail generation"
+  ],
+  "links": [
+   {
+    "label": "GitHub: THUDM/slime",
+    "url": "https://github.com/THUDM/slime"
+   },
+   {
+    "label": "slime docs",
+    "url": "https://thudm.github.io/slime/"
+   },
+   {
+    "label": "LMSYS blog: slime",
+    "url": "https://lmsys.org/blog/2025-07-09-slime/"
+   }
+  ],
+  "year": "2025"
+ },
+ {
+  "id": "miles",
+  "group": "Post-training & reasoning",
+  "name": "Miles",
+  "examples": [
+   "Fully async RL",
+   "P2P RDMA weight transfer",
+   "Rollout Routing Replay (R3) for MoE",
+   "MXFP8/NVFP4 low-precision RL"
+  ],
+  "summary": "RadixArk's enterprise-facing RL post-training framework, forked from and co-evolving with slime: SGLang for rollout and Megatron-LM for training, with FSDP2 and torchtitan backends also supported.",
+  "why": "It targets production RL at trillion-parameter scale, adding the stability, precision and fault tolerance features long MoE runs need.",
+  "keyIdeas": [
+   "Fully async RL: rollout and training workers decoupled, with configurable on- and off-policy schedules",
+   "Token-in-token-out avoids detokenize/retokenize drift; R3 replays rollout MoE routing in the trainer forward pass",
+   "Fast in-loop weight updates, with P2P RDMA as the fast path for disaggregated setups",
+   "Recovers dead SGLang engines in place; runs on Ray or Kubernetes; GRPO, GSPO, PPO, REINFORCE++, on-policy distillation"
+  ],
+  "links": [
+   {
+    "label": "GitHub: radixark/miles",
+    "url": "https://github.com/radixark/miles"
+   },
+   {
+    "label": "Miles docs",
+    "url": "https://miles.radixark.com/docs"
+   },
+   {
+    "label": "Miles v0.1 technical report",
+    "url": "https://arxiv.org/abs/2609.08368"
+   }
+  ],
+  "year": "2025"
+ },
+ {
+  "id": "megatron-core",
+  "group": "Training & optimization",
+  "name": "Megatron-Core (MCore) performance",
+  "examples": [
+   "Megatron Core (megatron-core on PyPI)",
+   "Megatron-FSDP and the distributed optimizer",
+   "Megatron Bridge (Hugging Face checkpoint conversion)",
+   "verl, NeMo RL and slime Megatron training backends"
+  ],
+  "summary": "NVIDIA's composable, GPU-optimized library (in the NVIDIA/Megatron-LM repo) of transformer building blocks with TP, PP, DP, EP and CP parallelism and FP16, BF16, FP8 and FP4 mixed precision.",
+  "why": "It is the training backend behind many large pretraining and RL post-training stacks, so its parallelism and overlap knobs decide MFU at scale.",
+  "keyIdeas": [
+   "Total GPUs = TP x PP x CP x EP x DP; sequence parallelism is recommended with TP and required when combining TP with EP",
+   "Data parallel options: DDP, distributed optimizer, Megatron-FSDP (shard optim, grads, params like ZeRO-1/2/3)",
+   "Overlap comms with compute: --overlap-grad-reduce, --overlap-param-gather, --tp-comm-overlap; PP overlap on by default",
+   "README reports up to 47% MFU on H100; MFU falls 47% to 42% when strong scaling GPT-3 175B as comms become exposed"
+  ],
+  "links": [
+   {
+    "label": "NVIDIA/Megatron-LM",
+    "url": "https://github.com/NVIDIA/Megatron-LM"
+   },
+   {
+    "label": "Parallelism strategies guide",
+    "url": "https://docs.nvidia.com/megatron-core/developer-guide/latest/user-guide/parallelism-guide.html"
+   },
+   {
+    "label": "NeMo RL (Megatron Core backend)",
+    "url": "https://github.com/NVIDIA-NeMo/RL"
+   }
+  ]
+ },
+ {
+  "id": "agent-harness",
+  "group": "Agents",
+  "name": "Agent harnesses",
+  "examples": [
+   "Claude Agent SDK (agent loop, compaction)",
+   "OpenAI Agents SDK Runner (max_turns, handoffs)",
+   "SWE-agent / mini-swe-agent",
+   "SWE-bench style eval runs in Docker sandboxes"
+  ],
+  "summary": "The scaffolding that turns an LLM into an agent: a loop that calls the model, executes the tools it requests, feeds results back, and manages context, sandboxing, limits and stopping.",
+  "why": "Agent quality depends heavily on the harness (tools, context, limits), and the same harnesses drive agent evals and RL rollout environments.",
+  "keyIdeas": [
+   "Loop: model call, run tool calls, append results, repeat until a final text answer with no tool calls",
+   "Stopping and control: max turns or budget caps (MaxTurnsExceeded, error_max_turns), plus human checkpoints",
+   "Context management: auto compaction summarizes older history near the window limit, keeping recent turns",
+   "Agent-computer interface (SWE-agent): tool design and docs strongly affect agent performance"
+  ],
+  "links": [
+   {
+    "label": "Anthropic: Building effective agents",
+    "url": "https://www.anthropic.com/engineering/building-effective-agents"
+   },
+   {
+    "label": "Claude Agent SDK: agent loop",
+    "url": "https://code.claude.com/docs/en/agent-sdk/agent-loop"
+   },
+   {
+    "label": "SWE-agent paper (arXiv 2405.15793)",
+    "url": "https://arxiv.org/abs/2405.15793"
+   }
+  ]
+ },
+ {
+  "id": "sglang",
+  "group": "Inference & serving",
+  "name": "SGLang",
+  "examples": [
+   "RadixAttention prefix caching (--radix-eviction-policy)",
+   "Structured outputs via XGrammar, Outlines or llguidance",
+   "Overlap scheduler (CPU scheduling overlapped with GPU)",
+   "Rollout engine in verl, slime, AReaL, Miles"
+  ],
+  "summary": "Open-source inference framework from sgl-project (hosted by LMSYS) for LLMs, VLMs and diffusion models, aimed at agentic workloads, large-scale serving and RL rollouts.",
+  "why": "Widely used both as a production serving engine and as the rollout generator inside RL post-training frameworks.",
+  "keyIdeas": [
+   "RadixAttention keeps KV cache in a radix tree for automatic prefix reuse; eviction policies include lru and lfu",
+   "Paper adds compressed finite state machines for faster constrained decoding; XGrammar is the default grammar backend",
+   "Many attention backends (FlashInfer, FA3/FA4, Triton, FlashMLA, TRTLLM MLA, AITER), auto-selected per hardware",
+   "Runs on NVIDIA, AMD, Google TPU, Intel, Apple Silicon, Huawei Ascend and Moore Threads hardware"
+  ],
+  "links": [
+   {
+    "label": "sgl-project/sglang",
+    "url": "https://github.com/sgl-project/sglang"
+   },
+   {
+    "label": "SGLang paper (arXiv 2312.07104)",
+    "url": "https://arxiv.org/abs/2312.07104"
+   },
+   {
+    "label": "Attention backend docs",
+    "url": "https://docs.sglang.io/docs/advanced_features/attention_backend"
+   }
+  ],
+  "year": "2023"
+ },
+ {
+  "id": "kv-cache-offload",
+  "group": "Inference & serving",
+  "name": "KV cache offloading",
+  "examples": [
+   "LMCache (LMCacheConnectorV1 / LMCacheMPConnector in vLLM)",
+   "vLLM OffloadingConnector (CPU tier plus optional FS, object-store or P2P tiers)",
+   "SGLang HiCache (GPU L1, host L2, storage L3)",
+   "NixlConnector / MooncakeConnector for prefill-to-decode KV transfer"
+  ],
+  "summary": "Moving KV cache out of GPU HBM into CPU memory, local disk or remote storage so it can be reused across requests, sessions and engine instances instead of being recomputed by prefill.",
+  "why": "Prefix-cache hits are capped by HBM size; offload tiers turn repeated long contexts (multi-turn, agents, RAG) into KV loads instead of prefill, cutting TTFT.",
+  "keyIdeas": [
+   "Extends prefix caching: vLLM copies completed blocks to pinned host memory with async DMA and promotes hits back to GPU on demand",
+   "SGLang HiCache: HiRadixTree over GPU (L1), instance-private host (L2), shared storage L3 (Mooncake, 3FS, NIXL, file)",
+   "Load vs recompute: HiCache prefetch policies (best_effort, wait_complete, timeout) and vLLM max_load_tokens bound transfer time",
+   "The same KV connector API ships KV from prefill to decode workers in disaggregated serving (LMCache, NIXL, Mooncake)"
+  ],
+  "links": [
+   {
+    "label": "LMCache repo",
+    "url": "https://github.com/LMCache/LMCache"
+   },
+   {
+    "label": "vLLM KV offloading guide",
+    "url": "https://docs.vllm.ai/en/latest/features/kv_offloading_usage.html"
+   },
+   {
+    "label": "SGLang HiCache design",
+    "url": "https://docs.sglang.io/advanced_features/hicache_design.html"
+   }
+  ]
+ },
+ {
+  "id": "vllm-attention-backends",
+  "group": "Inference & serving",
+  "name": "vLLM attention backends",
+  "examples": [
+   "FLASH_ATTN (FA2/FA3/FA4 via flash_attn_version)",
+   "FLASHINFER, TRITON_ATTN, FLEX_ATTENTION",
+   "MLA: FLASHMLA, CUTLASS_MLA, FLASHINFER_MLA, TRITON_MLA",
+   "ROCM_ATTN, ROCM_AITER_MLA, CPU_ATTN"
+  ],
+  "summary": "vLLM's pluggable attention kernels (AttentionBackendEnum), chosen with --attention-backend or --attention-config.backend; by default vLLM picks the first backend in a priority list that validates for the model and GPU.",
+  "why": "The backend decides which KV dtypes, block sizes, head sizes and GPUs work, so it directly drives latency and whether a model config runs at all.",
+  "keyIdeas": [
+   "Auto-selection walks a priority list, validating dtype, KV dtype, block size, head size and compute capability",
+   "FlashAttention defaults to FA4 on SM100+, FA3 on SM90, FA2 otherwise; override with flash_attn_version",
+   "MLA uses separate backends: decode via -ac.backend (FLASHMLA, TRITON_MLA), prefill via -ac.mla_prefill_backend",
+   "Backends differ on FP8 KV cache, attention sinks, sparse MLA, non-causal and DCP; ROCm and CPU use their own"
+  ],
+  "links": [
+   {
+    "label": "vLLM attention backends",
+    "url": "https://docs.vllm.ai/en/latest/design/attention_backends.html"
+   }
+  ]
+ },
+ {
+  "id": "flashinfer",
+  "group": "Inference & serving",
+  "name": "FlashInfer",
+  "examples": [
+   "Paged and ragged KV-cache attention (decode, prefill, append)",
+   "MLA, cascade and POD-Attention kernels",
+   "Sorting-free top-k / top-p / min-p sampling",
+   "FP8/FP4 GEMM and fused MoE kernels"
+  ],
+  "summary": "A kernel library and generator for LLM inference with unified APIs for attention, GEMM, MoE, sampling and communication, backed by its own kernels plus FlashAttention-2/3, cuDNN, CUTLASS and TensorRT-LLM.",
+  "why": "It is a kernel layer under engines like vLLM and SGLang, so its paged-KV formats and attention variants shape what those engines can serve fast.",
+  "keyIdeas": [
+   "Handles heterogeneous KV-cache storage with block-sparse and composable formats to cut redundant memory access",
+   "Customizable attention template compiled JIT; optional prebuilt cubin and jit-cache wheels skip first-use compiles",
+   "Load-balanced scheduling adapts to dynamic batches while staying CUDAGraph compatible",
+   "README lists SGLang, vLLM, TensorRT-LLM, TGI and MLC-LLM among adopters"
+  ],
+  "links": [
+   {
+    "label": "GitHub repo",
+    "url": "https://github.com/flashinfer-ai/flashinfer"
+   },
+   {
+    "label": "Paper (arXiv 2501.01005)",
+    "url": "https://arxiv.org/abs/2501.01005"
+   },
+   {
+    "label": "Docs",
+    "url": "https://docs.flashinfer.ai/"
+   }
+  ],
+  "year": "2024"
+ },
+ {
+  "id": "cutlass-cute",
+  "group": "Inference & serving",
+  "name": "CUTLASS and CuTe",
+  "examples": [
+   "CUTLASS C++ GEMM templates (FP64 down to NVFP4/MXFP4)",
+   "CuTe Layout and Tensor abstractions",
+   "CuTe DSL (Python, from CUTLASS 4)",
+   "FlashAttention-4 written in CuTe DSL"
+  ],
+  "summary": "NVIDIA CUTLASS is a CUDA C++ template library for high-performance GEMM and related kernels; CuTe (since CUTLASS 3.0) adds Layout and Tensor abstractions, and CUTLASS 4 adds the Python CuTe DSL.",
+  "why": "FlashAttention-3/4, FlashInfer backends and vLLM's CUTLASS_MLA build on it to reach Tensor Core peak on Hopper and Blackwell.",
+  "keyIdeas": [
+   "GEMM decomposed hierarchically into reusable tiling, data-movement and MMA pieces tuned by tile size, dtype and policy",
+   "CuTe layouts are hierarchical multidimensional maps, combined by functional composition to build tiling and partitioning",
+   "CuTe DSL exposes the same layouts, tensors and hardware atoms from Python with much faster compile times",
+   "FlashAttention-3 uses CUTLASS abstractions on Hopper; FlashAttention-4 is written in CuTe DSL for Hopper and Blackwell"
+  ],
+  "links": [
+   {
+    "label": "CUTLASS repo",
+    "url": "https://github.com/NVIDIA/cutlass"
+   },
+   {
+    "label": "CuTe DSL quick start",
+    "url": "https://docs.nvidia.com/cutlass/latest/media/docs/pythonDSL/quick_start.html"
+   },
+   {
+    "label": "FlashAttention repo",
+    "url": "https://github.com/Dao-AILab/flash-attention"
+   }
+  ],
+  "year": "2017"
+ },
+ {
+  "id": "knowledge-distillation",
+  "group": "Training & optimization",
+  "name": "Knowledge distillation (teacher to student)",
+  "examples": [
+   "DistilBERT (distilled from BERT during pre-training)",
+   "Sentence Transformers model distillation",
+   "Ensemble compression into one deployable model"
+  ],
+  "summary": "Training a smaller student model to match the output distribution (soft targets) of a larger teacher or ensemble, instead of only the hard labels, so most of the teacher's quality fits in a cheaper model.",
+  "why": "Lets you serve a smaller, faster model (lower latency and cost) that keeps much of a large model's quality, a common step before deployment.",
+  "keyIdeas": [
+   "Soft targets: use the teacher's class probabilities as training targets; they carry more information than one-hot labels",
+   "Temperature: raise the softmax temperature for teacher and student so small probabilities still give signal",
+   "Hinton et al. scale soft-target gradients by T squared when mixing with the hard-label loss",
+   "DistilBERT: 40% smaller, 60% faster, keeps 97% of BERT's language understanding (per its paper)"
+  ],
+  "links": [
+   {
+    "label": "Hinton et al. 2015 (arXiv)",
+    "url": "https://arxiv.org/abs/1503.02531"
+   },
+   {
+    "label": "DistilBERT paper (arXiv)",
+    "url": "https://arxiv.org/abs/1910.01108"
+   },
+   {
+    "label": "DistilBERT in Transformers docs",
+    "url": "https://huggingface.co/docs/transformers/model_doc/distilbert"
+   }
+  ],
+  "year": "2015"
+ },
+ {
+  "id": "click-models-ipw",
+  "group": "Re-ranking",
+  "name": "Click models and unbiased learning to rank",
+  "examples": [
+   "Propensity-Weighted Ranking SVM (Joachims et al.)",
+   "Position-based examination model",
+   "Swap-intervention propensity estimation"
+  ],
+  "summary": "Learning rankers from clicks while correcting for presentation bias: a click model estimates how likely each position is examined (the propensity), and training reweights clicks by inverse propensity.",
+  "why": "Click logs are the cheapest relevance signal for search and RAG rankers, but training on them raw just teaches the model to repeat its old ranking.",
+  "keyIdeas": [
+   "Position bias: higher-ranked results get more clicks regardless of relevance, so raw clicks are biased labels",
+   "Position-based model: a click requires the result to be examined, and examination depends only on rank",
+   "Inverse propensity scoring gives an unbiased empirical risk estimate, even when queries do not repeat",
+   "Propensities can be estimated with small swap interventions instead of fully randomized rankings"
+  ],
+  "links": [
+   {
+    "label": "Unbiased Learning-to-Rank with Biased Feedback (arXiv)",
+    "url": "https://arxiv.org/abs/1608.04468"
+   }
+  ],
+  "year": "2016"
+ },
+ {
+  "id": "conversational-query-state",
+  "group": "Query understanding",
+  "name": "Conversational query refinement (multi-turn state)",
+  "examples": [
+   "CANARD question-in-context rewriting dataset",
+   "TREC CAsT conversational search track",
+   "LlamaIndex condense-question chat engine"
+  ],
+  "summary": "Turning a context-dependent follow-up (with pronouns, ellipsis) into a self-contained query using the conversation history, so a standard retriever can answer each turn.",
+  "why": "Chat-style RAG fails on follow-ups like 'what about its pricing?' unless the query is rewritten with the dialogue state before retrieval.",
+  "keyIdeas": [
+   "Question-in-context rewriting: rewrite to a standalone question with the same answer (CANARD, 40,527 questions from QuAC)",
+   "TREC CAsT 2019 found a 35% relative gain for manually resolved utterances over the best automatic system",
+   "Condense-question pattern: an LLM rewrites history plus last message into one query, then retrieval runs on it",
+   "Tradeoff: always rewriting and retrieving handles knowledge questions but struggles with meta questions about the chat"
+  ],
+  "links": [
+   {
+    "label": "Can You Unpack That? (CANARD, EMNLP 2019)",
+    "url": "https://aclanthology.org/D19-1605/"
+   },
+   {
+    "label": "TREC CAsT 2019 overview (arXiv)",
+    "url": "https://arxiv.org/abs/2003.13624"
+   },
+   {
+    "label": "LlamaIndex condense question mode",
+    "url": "https://developers.llamaindex.ai/python/examples/chat_engine/chat_engine_condense_question/"
+   }
+  ]
+ },
+ {
+  "id": "product-quantization",
+  "group": "Retrieval & memory",
+  "name": "Product quantization (PQ)",
+  "examples": [
+   "Faiss IndexPQ",
+   "Faiss IndexIVFPQ (IVFADC: coarse quantizer plus PQ on residuals)",
+   "Faiss factory strings like \"PQ16\", \"IVF4096,PQ16\""
+  ],
+  "summary": "A vector compression method that splits each vector into M sub-vectors and quantizes each with its own k-means codebook, storing only the M centroid ids as a compact code.",
+  "why": "Lets billion-scale embedding indexes fit in RAM or GPU memory and be searched fast, trading some recall for large memory savings.",
+  "keyIdeas": [
+   "Code size is M times log2(K) bits, while the number of representable vectors is K to the power M",
+   "Search compares the query to codes in the compressed domain using per-query lookup tables",
+   "Often combined with an inverted file (IVF) so only a few partitions are scanned, with PQ encoding residuals",
+   "Knobs: more sub-vectors or bits per code improve accuracy at the cost of memory"
+  ],
+  "links": [
+   {
+    "label": "The Faiss library (arXiv)",
+    "url": "https://arxiv.org/abs/2401.08281"
+   },
+   {
+    "label": "Faiss wiki: Faiss indexes",
+    "url": "https://github.com/facebookresearch/faiss/wiki/Faiss-indexes"
+   }
+  ]
+ },
+ {
+  "id": "matryoshka-embeddings",
+  "group": "Retrieval & memory",
+  "name": "Matryoshka embeddings (truncatable vectors)",
+  "examples": [
+   "Matryoshka Representation Learning (RAIVNLab/MRL)",
+   "Sentence Transformers MatryoshkaLoss",
+   "truncate_dim in SentenceTransformer, e.g. nomic-embed-text-v1.5"
+  ],
+  "summary": "Embeddings trained so that prefixes of the vector (e.g. the first 64 or 256 dims) are themselves useful embeddings, letting one model serve multiple sizes by truncation.",
+  "why": "Cuts vector storage and search cost in RAG systems without retraining, and enables cheap shortlist then full-size rerank pipelines.",
+  "keyIdeas": [
+   "Training applies the same loss on several truncated prefixes (e.g. 768, 512, 256, 128, 64) and sums them",
+   "Adds no inference cost: just keep the first d dimensions at query and index time",
+   "MRL paper reports up to 14x smaller embeddings at equal ImageNet-1K accuracy",
+   "Two-stage use: shortlist with small vectors, then rerank the survivors with full-size vectors"
+  ],
+  "links": [
+   {
+    "label": "Matryoshka Representation Learning (arXiv)",
+    "url": "https://arxiv.org/abs/2205.13147"
+   },
+   {
+    "label": "Sentence Transformers: Matryoshka Embeddings",
+    "url": "https://sbert.net/examples/sentence_transformer/training/matryoshka/README.html"
+   },
+   {
+    "label": "RAIVNLab/MRL",
+    "url": "https://github.com/RAIVNLab/MRL"
+   }
+  ],
+  "year": "2022"
+ },
+ {
+  "id": "recommender-systems",
+  "group": "Re-ranking",
+  "name": "Recommender systems and cold start",
+  "examples": [
+   "Matrix factorization trained with SGD or WALS",
+   "Wide & Deep (Google Play)",
+   "Retrieval, scoring and re-ranking pipeline"
+  ],
+  "summary": "Systems that predict which items a user wants, typically by learning user and item embeddings from interaction data; cold start is the failure to recommend users or items with no training interactions.",
+  "why": "The same retrieve, score, rerank stack and embedding tricks power LLM-era feeds, search and RAG ranking, and new items arrive constantly.",
+  "keyIdeas": [
+   "Matrix factorization: predicted affinity is the dot product of a user embedding and an item embedding",
+   "Cold start: an item unseen in training has no embedding, so the model cannot score it",
+   "Mitigations: project a new item with a WALS step from a few interactions, or average embeddings of similar items",
+   "Wide & Deep combines a wide linear model (memorization) with a deep network (generalization)"
+  ],
+  "links": [
+   {
+    "label": "Google ML: collaborative filtering pros and cons",
+    "url": "https://developers.google.com/machine-learning/recommendation/collaborative/summary"
+   },
+   {
+    "label": "Wide & Deep Learning for Recommender Systems (arXiv)",
+    "url": "https://arxiv.org/abs/1606.07792"
+   }
+  ]
+ },
+ {
+  "id": "constraint-solvers",
+  "group": "Data handling",
+  "name": "Constraint satisfaction solvers (CP and SAT)",
+  "examples": [
+   "Google OR-Tools CP-SAT (ortools.sat.python.cp_model)",
+   "MiniZinc modelling language",
+   "Z3 (Microsoft Research)"
+  ],
+  "summary": "Constraint programming finds feasible assignments for variables with finite domains that satisfy every declared constraint, optionally optimizing an objective. You declare the rules; the solver searches.",
+  "why": "Scheduling, allocation and packing problems explode combinatorially; a declarative model plus a solver beats hand-written search and is easy to extend with new rules.",
+  "keyIdeas": [
+   "Model = integer or boolean variables + constraints (+ optional objective); CP focuses on feasibility rather than optimization",
+   "CP-SAT works over integers only: scale fractional coefficients up to integers before modelling",
+   "Global constraints capture common structure: add_all_different, interval variables with no_overlap and cumulative",
+   "Results report a status (OPTIMAL, FEASIBLE, INFEASIBLE, UNKNOWN); set max_time_in_seconds to bound search time"
+  ],
+  "links": [
+   {
+    "label": "OR-Tools CP-SAT guide",
+    "url": "https://developers.google.com/optimization/cp/cp_solver"
+   },
+   {
+    "label": "CP-SAT modelling recipes",
+    "url": "https://github.com/google/or-tools/blob/stable/ortools/sat/docs/README.md"
+   },
+   {
+    "label": "MiniZinc",
+    "url": "https://www.minizinc.org/"
+   }
+  ]
+ },
+ {
+  "id": "metric-learning-reid",
+  "group": "Vision",
+  "name": "Metric learning and re-identification",
+  "examples": [
+   "FaceNet (triplet-loss face embeddings)",
+   "pytorch-metric-learning (losses, miners)",
+   "Torchreid (person re-ID, OSNet)"
+  ],
+  "summary": "Metric learning trains a network to map inputs to embeddings where distance reflects identity, so the same person or object seen in different images lands close together. Re-identification then becomes nearest-neighbor search.",
+  "why": "Matching the same entity across cameras or over time needs an embedding space where identity, not appearance noise, drives distance; the same idea underlies retrieval embeddings.",
+  "keyIdeas": [
+   "Triplet loss: pull an anchor toward a same-label positive and push a different-label negative away by at least a margin m",
+   "Most random triplets are trivial, so mining matters: batch hard samples P identities x K images and uses the hardest pairs",
+   "No fixed class head: new identities at test time are handled by comparing embeddings, e.g. ranking a gallery per query",
+   "FaceNet reported 128-byte face embeddings usable directly for verification, recognition and clustering"
+  ],
+  "links": [
+   {
+    "label": "FaceNet (arXiv)",
+    "url": "https://arxiv.org/abs/1503.03832"
+   },
+   {
+    "label": "In Defense of the Triplet Loss for ReID (arXiv)",
+    "url": "https://arxiv.org/abs/1703.07737"
+   },
+   {
+    "label": "pytorch-metric-learning repo",
+    "url": "https://github.com/KevinMusgrave/pytorch-metric-learning"
+   }
+  ],
+  "year": "2015"
+ },
+ {
+  "id": "local-feature-matching",
+  "group": "Vision",
+  "name": "Local feature matching (SIFT, ORB)",
+  "examples": [
+   "cv.SIFT_create / cv.ORB_create (OpenCV)",
+   "cv.BFMatcher and cv.FlannBasedMatcher",
+   "skimage.feature.ORB (scikit-image)"
+  ],
+  "summary": "Detect distinctive keypoints in each image, describe the patch around each with a descriptor vector, then pair descriptors across images by nearest-neighbor distance to find corresponding points.",
+  "why": "Correspondences between images are the input to alignment, stitching, object finding and tracking, with no training data required.",
+  "keyIdeas": [
+   "SIFT: DoG extrema across scale, orientation assignment, 128-value descriptor (patent expired 2020; now in main OpenCV)",
+   "ORB: FAST keypoints + rotation-steered BRIEF binary descriptor; much cheaper than SIFT, a fit for low-power devices",
+   "Match float descriptors with L2 and binary ones with Hamming distance; FLANN is faster than brute force on large sets",
+   "Filter ambiguous matches with Lowe's ratio test (best < 0.7 to 0.8 x second best; OpenCV uses 0.75) or cross-checking"
+  ],
+  "links": [
+   {
+    "label": "OpenCV SIFT tutorial",
+    "url": "https://github.com/opencv/opencv/blob/4.x/doc/py_tutorials/py_feature2d/py_sift_intro/py_sift_intro.markdown"
+   },
+   {
+    "label": "OpenCV ORB tutorial",
+    "url": "https://github.com/opencv/opencv/blob/4.x/doc/py_tutorials/py_feature2d/py_orb/py_orb.markdown"
+   },
+   {
+    "label": "OpenCV feature matching tutorial",
+    "url": "https://github.com/opencv/opencv/blob/4.x/doc/py_tutorials/py_feature2d/py_matcher/py_matcher.markdown"
+   }
+  ]
+ },
+ {
+  "id": "image-alignment-change-detection",
+  "group": "Vision",
+  "name": "Image alignment (homography) and change detection",
+  "examples": [
+   "cv.findHomography + cv.warpPerspective (OpenCV)",
+   "skimage.registration.phase_cross_correlation",
+   "skimage.metrics.structural_similarity (SSIM)"
+  ],
+  "summary": "Estimate the geometric transform that maps one image onto another (a 3x3 homography for planar scenes or pure camera rotation), warp one into the other's frame, then compare aligned pixels to find what changed.",
+  "why": "Before-and-after comparison only works once images line up pixel to pixel; otherwise every small camera shift shows up as a false change.",
+  "keyIdeas": [
+   "A homography has 8 degrees of freedom and needs at least 4 point correspondences, usually from feature matching",
+   "RANSAC rejects bad matches as outliers; findHomography returns the inlier mask alongside the matrix",
+   "For pure translation, phase cross-correlation in Fourier space gives the shift with subpixel precision",
+   "After alignment, diff or SSIM the images; SSIM accounts for structure, so it tracks perceived change better than MSE"
+  ],
+  "links": [
+   {
+    "label": "OpenCV homography tutorial",
+    "url": "https://github.com/opencv/opencv/blob/4.x/doc/tutorials/features2d/homography/homography.markdown"
+   },
+   {
+    "label": "OpenCV feature matching + homography",
+    "url": "https://github.com/opencv/opencv/blob/4.x/doc/py_tutorials/py_feature2d/py_feature_homography/py_feature_homography.markdown"
+   },
+   {
+    "label": "scikit-image SSIM example",
+    "url": "https://scikit-image.org/docs/stable/auto_examples/transform/plot_ssim.html"
+   }
+  ]
+ },
+ {
+  "id": "geometric-hashing",
+  "group": "Vision",
+  "name": "Geometric hashing and star-pattern plate solving",
+  "examples": [
+   "Astrometry.net (blind astrometric calibration)",
+   "astroalign (Python, triangle asterisms)"
+  ],
+  "summary": "Plate solving identifies where an image of the sky points by turning small groups of stars into shape codes that ignore position, rotation and scale, then looking those codes up in an index built from a star catalog.",
+  "why": "It is a clean example of invariant hashing plus nearest-neighbor lookup plus hypothesis verification, the same retrieve-then-verify pattern used in large-scale search.",
+  "keyIdeas": [
+   "Astrometry.net quad code: the widest pair A, B sets a local frame; C and D positions there form a 4-D hash vector",
+   "Codes are invariant to translation, rotation and scale; noise means lookup is a neighborhood search (kd-tree), not an exact key match",
+   "Each matching code is a hypothesis about pointing, scale and orientation, accepted only after a Bayesian verification test",
+   "astroalign matches 3-star triangles to estimate a similarity transform when corner features fail on point-like stars"
+  ],
+  "links": [
+   {
+    "label": "Astrometry.net paper (arXiv)",
+    "url": "https://arxiv.org/abs/0910.2233"
+   },
+   {
+    "label": "Astrometry.net",
+    "url": "https://astrometry.net/"
+   },
+   {
+    "label": "astroalign repo",
+    "url": "https://github.com/quatrope/astroalign"
+   }
+  ]
+ },
+ {
+  "id": "reference-marker-measurement",
+  "group": "Vision",
+  "name": "Measuring size from a reference marker",
+  "examples": [
+   "ArUco markers (cv::aruco::ArucoDetector)",
+   "cv.calibrateCamera + cv.undistort",
+   "cv.solvePnP for marker pose"
+  ],
+  "summary": "Put an object of known physical size (a printed fiducial marker, a coin, a card) in the same plane as the thing you want to measure; its known size converts pixel distances into real units.",
+  "why": "Turns a single uncalibrated photo into real-world measurements, a common requirement for apps that estimate sizes, areas or distances from a phone camera.",
+  "keyIdeas": [
+   "Scale = known marker width / marker width in pixels; only valid for objects in the marker's plane",
+   "A square marker's 4 corners give a homography to rectify the plane, removing perspective before measuring",
+   "ArUco markers carry a binary ID with error correction; pose from solvePnP is in the units of the marker side length",
+   "Lens distortion bends straight lines; calibrate once per camera (camera matrix + distortion coefficients) and undistort"
+  ],
+  "links": [
+   {
+    "label": "OpenCV ArUco detection tutorial",
+    "url": "https://github.com/opencv/opencv/blob/4.x/doc/tutorials/objdetect/aruco_detection/aruco_detection.markdown"
+   },
+   {
+    "label": "OpenCV camera calibration tutorial",
+    "url": "https://github.com/opencv/opencv/blob/4.x/doc/py_tutorials/py_calib3d/py_calibration/py_calibration.markdown"
+   }
+  ]
+ },
+ {
+  "id": "llm-prompting-structured-output",
+  "group": "Audio & language",
+  "name": "LLM prompting and structured output",
+  "examples": [
+   "OpenAI Structured Outputs (JSON Schema via response format or function calling)",
+   "Outlines (dottxt-ai) constrained generation library",
+   "Chain-of-thought prompting with few-shot exemplars"
+  ],
+  "summary": "Techniques for steering an LLM with instructions and examples, and for forcing its output to match a format such as a JSON Schema, regex or grammar so downstream code can parse it reliably.",
+  "why": "Agents, extractors and tool-calling pipelines break on malformed output; schema-constrained decoding turns free text into a dependable API contract.",
+  "keyIdeas": [
+   "Chain-of-thought: a few exemplars with intermediate reasoning steps improve arithmetic and symbolic reasoning in large models",
+   "JSON mode only guarantees valid JSON; OpenAI Structured Outputs also guarantees adherence to your supplied JSON Schema",
+   "Guided generation compiles a regex or CFG into a finite-state machine and indexes the vocabulary to mask invalid tokens",
+   "Constraining at decode time beats parse-and-retry: little per-token overhead and far fewer outputs to repair (truncation still possible)"
+  ],
+  "links": [
+   {
+    "label": "OpenAI Structured Outputs guide",
+    "url": "https://platform.openai.com/docs/guides/structured-outputs"
+   },
+   {
+    "label": "Efficient Guided Generation (Outlines paper)",
+    "url": "https://arxiv.org/abs/2307.09702"
+   },
+   {
+    "label": "Chain-of-Thought Prompting paper",
+    "url": "https://arxiv.org/abs/2201.11903"
+   }
+  ]
+ },
+ {
+  "id": "anomaly-detection",
+  "group": "Edge, data & geo",
+  "name": "Anomaly and outlier detection",
+  "examples": [
+   "scikit-learn IsolationForest",
+   "scikit-learn LocalOutlierFactor",
+   "scikit-learn OneClassSVM and EllipticEnvelope",
+   "PyOD (Python Outlier Detection library)"
+  ],
+  "summary": "Deciding whether an observation comes from the same distribution as the rest of the data. Outlier detection fits on contaminated data (unsupervised); novelty detection fits on clean data and flags new points (semi-supervised).",
+  "why": "Flags bad sensor readings, data-pipeline corruption and odd traffic or metrics before they poison training data or dashboards.",
+  "keyIdeas": [
+   "Isolation Forest: random feature and split value; anomalies are isolated in shorter average tree paths",
+   "Outlier methods assume anomalies sit in low-density regions and cannot form a dense cluster",
+   "scikit-learn thresholds a raw score_samples score; the contamination parameter sets the expected outlier fraction",
+   "OneClassSVM is sensitive to outliers; EllipticEnvelope assumes Gaussian data and fits an ellipse"
+  ],
+  "links": [
+   {
+    "label": "scikit-learn: Novelty and Outlier Detection",
+    "url": "https://scikit-learn.org/stable/modules/outlier_detection.html"
+   },
+   {
+    "label": "PyOD on GitHub",
+    "url": "https://github.com/yzhao062/pyod"
+   }
+  ]
+ },
+ {
+  "id": "energy-disaggregation",
+  "group": "Edge, data & geo",
+  "name": "Energy disaggregation (NILM)",
+  "examples": [
+   "NILMTK: dataset converters, meters, preprocessing and metrics",
+   "nilmtk-contrib: maintained disaggregation models",
+   "Public datasets such as REDD, UK-DALE and REFIT"
+  ],
+  "summary": "Non-intrusive load monitoring separates a household's total energy use, measured at a single point such as a smart meter, into estimated per-appliance consumption.",
+  "why": "A classic single-channel source separation problem on time series: a compact testbed for sequence models, benchmarks and reproducible evaluation.",
+  "keyIdeas": [
+   "Input is one aggregate signal; output is appliance-level estimates, so it is an ill-posed inverse problem",
+   "Comparison was historically hard due to different datasets, missing reference implementations and varied metrics",
+   "NILMTK standardizes datasets (converted to HDF5), preprocessing, reference algorithms and accuracy metrics"
+  ],
+  "links": [
+   {
+    "label": "NILMTK on GitHub",
+    "url": "https://github.com/nilmtk/nilmtk"
+   },
+   {
+    "label": "NILMTK paper (arXiv)",
+    "url": "https://arxiv.org/abs/1404.3878"
+   }
+  ]
+ },
+ {
+  "id": "signal-processing-basics",
+  "group": "Edge, data & geo",
+  "name": "Signal processing basics (filtering, FFT)",
+  "examples": [
+   "numpy.fft and rfft",
+   "scipy.signal.butter with sosfiltfilt or filtfilt",
+   "scipy.signal.welch power spectral density",
+   "scipy.signal.decimate and find_peaks"
+  ],
+  "summary": "Core tools for sampled time-domain signals: the discrete Fourier transform (computed via the FFT) maps a signal to its frequency spectrum, and digital filters remove noise or isolate frequency bands.",
+  "why": "Sensor, audio and telemetry features (spectra, filtered signals, peaks) are standard preprocessing before any model sees the data.",
+  "keyIdeas": [
+   "FFT computes the DFT fast; Cooley and Tukey brought it to light in its current form",
+   "For real input the spectrum is Hermitian, so rfft computes only non-negative frequencies",
+   "Forward-backward filtering (filtfilt, sosfiltfilt) gives zero phase; prefer SOS over [b, a] to avoid numerical problems",
+   "Downsample with an anti-aliasing filter first (decimate); Welch's method gives a smoothed PSD estimate"
+  ],
+  "links": [
+   {
+    "label": "NumPy discrete Fourier transform docs",
+    "url": "https://numpy.org/doc/stable/reference/routines.fft.html"
+   },
+   {
+    "label": "SciPy scipy.signal reference",
+    "url": "https://docs.scipy.org/doc/scipy/reference/signal.html"
+   }
+  ]
+ },
+ {
+  "id": "spatial-interpolation",
+  "group": "Edge, data & geo",
+  "name": "Spatial interpolation (IDW, kriging)",
+  "examples": [
+   "GDAL gdal_grid inverse distance to a power",
+   "PyKrige OrdinaryKriging and UniversalKriging",
+   "GSTools Krige class"
+  ],
+  "summary": "Estimating values at unsampled locations from scattered point measurements, e.g. turning sensor readings into a grid. IDW uses distance weights; kriging derives weights from a fitted variogram or covariance model.",
+  "why": "Turns sparse, irregular sensor or station data into dense maps and model features, with kriging adding a principled spatial correlation model.",
+  "keyIdeas": [
+   "IDW: weighted average with weights 1/r^p, so a larger power p makes nearby points dominate",
+   "Kriging fits a variogram model (spherical, exponential, gaussian, etc.) then solves for weights",
+   "Ordinary kriging forces weights to sum to 1 (mean estimated); simple kriging needs a known mean",
+   "Universal kriging adds drift terms for trends; a nugget term models measurement error"
+  ],
+  "links": [
+   {
+    "label": "GDAL gridding tutorial (IDW)",
+    "url": "https://gdal.org/en/stable/tutorials/gdal_grid_tut.html"
+   },
+   {
+    "label": "PyKrige on GitHub",
+    "url": "https://github.com/GeoStat-Framework/PyKrige"
+   },
+   {
+    "label": "GSTools kriging docs",
+    "url": "https://geostat-framework.readthedocs.io/projects/gstools/en/stable/examples/05_kriging/index.html"
+   }
+  ]
+ },
+ {
+  "id": "gtfs-realtime",
+  "group": "Edge, data & geo",
+  "name": "Transit feeds (GTFS and GTFS-realtime)",
+  "examples": [
+   "GTFS Schedule zip: stops.txt, routes.txt, trips.txt, stop_times.txt, calendar.txt",
+   "GTFS-realtime TripUpdate, VehiclePosition and Alert entities",
+   "google/transit gtfs-realtime.proto"
+  ],
+  "summary": "GTFS Schedule is a zip of text tables describing an agency's static timetable; GTFS-realtime is a Protocol Buffers feed of live updates (trip delays, vehicle positions, service alerts) keyed to it.",
+  "why": "The standard input for transit ETA prediction, delay analytics and trip planners; joining live updates to static schedules is the core data task.",
+  "keyIdeas": [
+   "Started as a TriMet (Portland) and Google collaboration, originally the Google Transit Feed Specification",
+   "A trip is a sequence of two or more stops; stop_times.txt holds per-stop arrival and departure times",
+   "Realtime FeedMessage holds FeedEntity items; StopTimeUpdate gives predicted times or a delay in seconds",
+   "GTFS-realtime is defined in proto2; delay is only meaningful relative to an existing GTFS schedule"
+  ],
+  "links": [
+   {
+    "label": "GTFS Schedule reference",
+    "url": "https://gtfs.org/documentation/schedule/reference/"
+   },
+   {
+    "label": "GTFS Realtime reference",
+    "url": "https://gtfs.org/documentation/realtime/reference/"
+   },
+   {
+    "label": "google/transit gtfs-realtime",
+    "url": "https://github.com/google/transit/tree/master/gtfs-realtime"
+   }
+  ]
+ },
+ {
+  "id": "shortest-path-routing",
+  "group": "Edge, data & geo",
+  "name": "Shortest-path routing on road graphs",
+  "examples": [
+   "OSRM (Open Source Routing Machine) on OpenStreetMap",
+   "OSMnx shortest_path and k_shortest_paths",
+   "Valhalla routing engine"
+  ],
+  "summary": "Finding the fastest or shortest route between points on a road network modeled as a weighted directed graph, typically built from OpenStreetMap with edge weights like length or travel time.",
+  "why": "Underpins ETA, logistics and map-matching features; production engines rely on graph preprocessing to answer queries fast at scale.",
+  "keyIdeas": [
+   "Plain Dijkstra works for small graphs (e.g. OSMnx minimizing edge length or travel_time)",
+   "OSRM preprocesses with Contraction Hierarchies or Multi-Level Dijkstra; MLD is its recommended default",
+   "OSRM keeps CH for special cases like very large distance matrices",
+   "OSRM and Valhalla also offer matrices and map matching of GPS traces to roads"
+  ],
+  "links": [
+   {
+    "label": "OSRM backend on GitHub",
+    "url": "https://github.com/Project-OSRM/osrm-backend"
+   },
+   {
+    "label": "OSMnx on GitHub",
+    "url": "https://github.com/gboeing/osmnx"
+   },
+   {
+    "label": "Valhalla on GitHub",
+    "url": "https://github.com/valhalla/valhalla"
+   }
+  ]
  }
 ]
