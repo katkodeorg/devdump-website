@@ -4032,5 +4032,154 @@
     "url": "https://github.com/valhalla/valhalla"
    }
   ]
+ },
+ {
+  "id": "log-parsing-analytics",
+  "group": "Data handling",
+  "name": "Log parsing and log analytics (Drain, templates)",
+  "summary": "Raw log lines are turned into a small set of templates with variable slots, so counting, diffing and anomaly detection work on structure instead of hand-written regexes.",
+  "why": "Every production system emits logs faster than anyone can read them; template mining is what makes them queryable and alertable.",
+  "keyIdeas": [
+   "Why one regular expression per format does not scale",
+   "Drain: a fixed-depth parse tree and a similarity threshold",
+   "Spell: templates from the longest common subsequence",
+   "How accurate is this really, and by which metric",
+   "From templates to counts, time series and alerts",
+   "Drift when a release changes the format, and a pipeline that holds"
+  ],
+  "examples": [],
+  "links": [
+   {
+    "label": "He, Zhu, Zheng, Lyu: Drain, An Online Log Parsing Approach with Fixed Depth Tree (ICWS 2017)",
+    "url": "https://jiemingzhu.github.io/pub/pjhe_icws2017.pdf"
+   },
+   {
+    "label": "Du, Li: Spell, Streaming Parsing of System Event Logs (ICDM 2016)",
+    "url": "https://www.cs.utah.edu/~lifeifei/papers/spell.pdf"
+   },
+   {
+    "label": "Zhu et al.: Tools and Benchmarks for Automated Log Parsing (ICSE-SEIP 2019)",
+    "url": "https://arxiv.org/abs/1811.03509"
+   }
+  ]
+ },
+ {
+  "id": "named-entity-recognition",
+  "group": "Data handling",
+  "name": "Named entity recognition and sequence labeling",
+  "summary": "Models label each token with a span tag (BIO schemes) to pull entities such as hosts, error codes or people out of free text, with CRF or transformer taggers and domain adaptation.",
+  "why": "Extracting structured fields from unstructured text is the first step in log analytics, search understanding and knowledge-graph building.",
+  "keyIdeas": [
+   "The task: pull typed spans out of running text",
+   "BIO, IOB1 and BIOES: tag sets that make spans decodable",
+   "The metric: entity-level micro F1 with exact span match",
+   "Scoring whole sequences: transitions and Viterbi by hand",
+   "Transformer taggers and subword alignment",
+   "Few labels, new domain, and the failure modes that remain"
+  ],
+  "examples": [],
+  "links": [
+   {
+    "label": "Tjong Kim Sang and De Meulder 2003, Introduction to the CoNLL-2003 Shared Task",
+    "url": "https://aclanthology.org/W03-0419/"
+   },
+   {
+    "label": "Ramshaw and Marcus 1995, Text Chunking using Transformation-Based Learning (the I, O, B tag set)",
+    "url": "https://arxiv.org/abs/cmp-lg/9505040"
+   },
+   {
+    "label": "Ratinov and Roth 2009, Design Challenges and Misconceptions in Named Entity Recognition",
+    "url": "https://aclanthology.org/W09-1119/"
+   }
+  ]
+ },
+ {
+  "id": "clustering-methods",
+  "group": "Data handling",
+  "name": "Clustering (k-means, DBSCAN, HDBSCAN)",
+  "summary": "Unlabelled points are grouped by distance or density: k-means for compact clusters, DBSCAN and HDBSCAN for arbitrary shapes and noise, with silhouette and stability to judge the result.",
+  "why": "Grouping similar logs, embeddings or incidents is how recurring failure patterns and duplicate content get found without labels.",
+  "keyIdeas": [
+   "What k-means actually optimises",
+   "Lloyd's algorithm by hand, and why the seeds decide",
+   "Choosing k: elbow, silhouette and their limits",
+   "DBSCAN: core points, border points and noise",
+   "HDBSCAN: a hierarchy instead of one eps",
+   "Clustering embeddings of logs and incidents"
+  ],
+  "examples": [],
+  "links": [
+   {
+    "label": "Ester, Kriegel, Sander, Xu: A Density-Based Algorithm for Discovering Clusters (DBSCAN), KDD 1996",
+    "url": "https://cdn.aaai.org/KDD/1996/KDD96-037.pdf"
+   },
+   {
+    "label": "Arthur and Vassilvitskii: k-means++: The Advantages of Careful Seeding, SODA 2007",
+    "url": "https://theory.stanford.edu/~sergei/papers/kMeansPP-soda.pdf"
+   },
+   {
+    "label": "Schubert: Stop using the elbow criterion for k-means (arXiv 2212.12189)",
+    "url": "https://arxiv.org/abs/2212.12189"
+   }
+  ]
+ },
+ {
+  "id": "deterministic-inference",
+  "group": "Inference & serving",
+  "name": "Deterministic inference and bitwise reproducibility",
+  "summary": "Identical inputs can give different outputs when reduction order, atomics, kernel selection or batch composition change; determinism is recovered with fixed algorithms, stable reduction orders and equivalence tests.",
+  "why": "Caching, serving and regression testing all depend on knowing when two runs are allowed to differ and by how much.",
+  "keyIdeas": [
+   "Two orderings, two answers: float addition is not associative",
+   "Where a GPU inference stack loses bitwise equality",
+   "Batch-dependent numerics and the token that flips",
+   "Seeds and RNG state: a different problem from kernels",
+   "Testing equivalence: bitwise, tolerance and the cache-hit test"
+  ],
+  "examples": [],
+  "links": [
+   {
+    "label": "Goldberg, What Every Computer Scientist Should Know About Floating-Point Arithmetic",
+    "url": "https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html"
+   },
+   {
+    "label": "NVIDIA, Floating Point and IEEE 754 Compliance for NVIDIA GPUs",
+    "url": "https://docs.nvidia.com/cuda/floating-point/index.html"
+   },
+   {
+    "label": "CUDA C++ Programming Guide 12.6 (archived): atomic functions and block scheduling",
+    "url": "https://docs.nvidia.com/cuda/archive/12.6.0/cuda-c-programming-guide/index.html"
+   }
+  ]
+ },
+ {
+  "id": "federated-learning",
+  "group": "Training & optimization",
+  "name": "Federated learning (FedAvg, non-IID, secure aggregation)",
+  "summary": "Clients train locally and send updates that a server averages (FedAvg), which has to cope with non-IID data, stragglers and partial participation, and can add secure aggregation or differential privacy.",
+  "why": "When data cannot leave a device or an organization, this is the only way to train on it, and the systems constraints shape the algorithm.",
+  "keyIdeas": [
+   "The setting: data that is not allowed to leave the device",
+   "FedAvg exactly, worked on three clients over two rounds",
+   "Buying rounds with local work, and when that stops working",
+   "Non-IID data and client drift: fast convergence to the wrong answer",
+   "Stragglers, partial participation and the round quorum",
+   "What the server sees: secure aggregation, DP, and Flower"
+  ],
+  "examples": [],
+  "links": [
+   {
+    "label": "McMahan et al. 2017, Communication-Efficient Learning of Deep Networks from Decentralized Data (FedAvg)",
+    "url": "https://arxiv.org/abs/1602.05629"
+   },
+   {
+    "label": "Kairouz, McMahan et al. 2021, Advances and Open Problems in Federated Learning",
+    "url": "https://arxiv.org/abs/1912.04977"
+   },
+   {
+    "label": "Bonawitz et al. 2019, Towards Federated Learning at Scale: System Design",
+    "url": "https://arxiv.org/abs/1902.01046"
+   }
+  ]
  }
 ]

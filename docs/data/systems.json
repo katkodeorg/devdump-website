@@ -2763,5 +2763,213 @@
     "url": "https://github.com/pytorch/pytorch/blob/main/.github/ISSUE_TEMPLATE/bug-report.yml"
    }
   ]
+ },
+ {
+  "id": "root-cause-analysis",
+  "group": "Distributed systems",
+  "name": "Root cause analysis and incident response",
+  "summary": "An incident is narrowed with dependency and causal graphs, change correlation, and bisection over deploys, then written up so the same failure is cheaper next time.",
+  "why": "Mean time to resolution is dominated by locating the cause, not fixing it; the techniques are mostly about ruling things out quickly.",
+  "keyIdeas": [
+   "One fault, 397 alerts: collapsing the storm",
+   "The four golden signals, read as distributions",
+   "Walking the dependency graph to the anomalous frontier",
+   "What touched it last: change correlation and bisection",
+   "MTTR: detect, triage, mitigate, resolve",
+   "Trigger, proximate cause, contributing factors, action items"
+  ],
+  "examples": [],
+  "links": [
+   {
+    "label": "Google SRE book, Chapter 12: Effective Troubleshooting",
+    "url": "https://sre.google/sre-book/effective-troubleshooting/"
+   },
+   {
+    "label": "Google SRE book, Chapter 6: Monitoring Distributed Systems (four golden signals)",
+    "url": "https://sre.google/sre-book/monitoring-distributed-systems/"
+   },
+   {
+    "label": "Google SRE book, Chapter 14: Managing Incidents",
+    "url": "https://sre.google/sre-book/managing-incidents/"
+   }
+  ]
+ },
+ {
+  "id": "observability-metrics-traces",
+  "group": "Profiling & measurement",
+  "name": "Observability: metrics, traces and SLOs",
+  "summary": "Counters, histograms and spans are collected (Prometheus and OpenTelemetry style), aggregated into dashboards, and turned into service level objectives with error budgets and alerting that fires on symptoms.",
+  "why": "You cannot operate a service you cannot see; the shape of the data decides which questions you can answer during an incident.",
+  "keyIdeas": [
+   "What metrics, traces and logs can each answer",
+   "Counters, gauges, histograms, and the quantile you must not average",
+   "Inside a classic histogram: buckets, cumulative counts, interpolation",
+   "Cardinality: labels multiply, and a histogram multiplies again",
+   "Traces: spans, context propagation, and what sampling throws away",
+   "SLOs, error budgets, burn-rate alerts, and the 03:00 dashboard"
+  ],
+  "examples": [],
+  "links": [
+   {
+    "label": "Prometheus docs: metric types",
+    "url": "https://prometheus.io/docs/concepts/metric_types/"
+   },
+   {
+    "label": "Prometheus docs: histograms and summaries",
+    "url": "https://prometheus.io/docs/practices/histograms/"
+   },
+   {
+    "label": "Prometheus docs: PromQL functions (histogram_quantile, rate)",
+    "url": "https://prometheus.io/docs/prometheus/latest/querying/functions/"
+   }
+  ]
+ },
+ {
+  "id": "containers-kubernetes",
+  "group": "Distributed systems",
+  "name": "Containers and Kubernetes (namespaces, cgroups, scheduling)",
+  "summary": "A container is a process with namespaced views and cgroup limits; Kubernetes schedules those processes onto nodes with deployments, probes, requests and limits, autoscaling and device plugins for GPUs.",
+  "why": "Nearly all ML and backend services ship as containers, and most production surprises come from limits, probes and scheduling rather than the code.",
+  "keyIdeas": [
+   "A container is a process with a narrowed view",
+   "What an image actually is: layers, unions and digests",
+   "cgroup v2: cpu.max throttling and memory.max kills",
+   "Kubernetes: pods, requests versus limits, and placement",
+   "Probes, Services and DNS: liveness is not readiness",
+   "Autoscaling and GPU scheduling: two control loops"
+  ],
+  "examples": [],
+  "links": [
+   {
+    "label": "namespaces(7), Linux manual pages",
+    "url": "https://man7.org/linux/man-pages/man7/namespaces.7.html"
+   },
+   {
+    "label": "pid_namespaces(7), Linux manual pages",
+    "url": "https://man7.org/linux/man-pages/man7/pid_namespaces.7.html"
+   },
+   {
+    "label": "cgroups(7), Linux manual pages",
+    "url": "https://man7.org/linux/man-pages/man7/cgroups.7.html"
+   }
+  ]
+ },
+ {
+  "id": "gpu-profiling-sol",
+  "group": "Profiling & measurement",
+  "name": "GPU profiling and speed-of-light (SOL) analysis",
+  "summary": "Nsight Systems shows the timeline and gaps; Nsight Compute reports per-kernel counters, occupancy and the achieved fraction of memory and compute speed of light, which is what ranks optimization targets.",
+  "why": "Optimizing a kernel that is already at 90 percent of its bandwidth limit wastes effort; the SOL gap says where the headroom actually is.",
+  "keyIdeas": [
+   "Timeline first: where the 14.52 ms actually goes",
+   "Reading the Speed Of Light rows",
+   "Occupancy: what it buys and what caps it",
+   "The SOL gap: ranking many kernels by what they can return",
+   "How profiling perturbs what it measures"
+  ],
+  "examples": [],
+  "links": [
+   {
+    "label": "Nsight Compute Kernel Profiling Guide (Speed Of Light, replay, clock and cache control, range and precision)",
+    "url": "https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html"
+   },
+   {
+    "label": "Nsight Compute Compute Triage Guide (decision tree, thresholds, bytes in flight)",
+    "url": "https://docs.nvidia.com/nsight-compute/ComputeTriage/index.html"
+   },
+   {
+    "label": "Nsight Compute CLI (sets, sections, metrics, filters, replay modes)",
+    "url": "https://docs.nvidia.com/nsight-compute/NsightComputeCli/index.html"
+   }
+  ]
+ },
+ {
+  "id": "gpu-image-operators",
+  "group": "GPU & accelerators",
+  "name": "GPU image operators (resize, warp, convolution)",
+  "summary": "Per-pixel and neighbourhood image kernels are written for the GPU: interpolation and boundary handling for resize and warp, color conversion, separable convolution, and batching many small images into one launch.",
+  "why": "Vision pipelines spend much of their time in these operators, and they are the usual target when preprocessing becomes the bottleneck.",
+  "keyIdeas": [
+   "Pixels in memory: NHWC, NCHW, pitch and a warp's 96 bytes",
+   "Resize: the half-pixel center, worked on a four-pixel row",
+   "Warp and affine: an inverse map plus a border rule",
+   "Color conversion: a 3x3 matrix per pixel, with the right coefficients",
+   "Convolution: separable passes and the shared-memory halo",
+   "Batching: why 32 launches lose to one"
+  ],
+  "examples": [],
+  "links": [
+   {
+    "label": "CV-CUDA: resize kernels (half-pixel centers, bilinear weights, var-shape grid)",
+    "url": "https://github.com/CVCUDA/CV-CUDA/blob/main/src/cvcuda/priv/OpResize.cu"
+   },
+   {
+    "label": "CV-CUDA: warp affine and perspective coordinate maps",
+    "url": "https://github.com/CVCUDA/CV-CUDA/blob/main/src/cvcuda/priv/WarpCommon.cuh"
+   },
+   {
+    "label": "CV-CUDA: color conversion coefficients and fixed-point path",
+    "url": "https://github.com/CVCUDA/CV-CUDA/blob/main/src/cvcuda/priv/OpCvtColor.cu"
+   }
+  ]
+ },
+ {
+  "id": "kernel-autotuning",
+  "group": "Profiling & measurement",
+  "name": "Kernel autotuning and configuration search",
+  "summary": "A kernel is parameterized (tile sizes, stages, warps) and the space is searched by benchmarking candidates, with caching of winners, noise-aware measurement and guards against regressions.",
+  "why": "Hand-picked tile sizes rarely stay optimal across shapes and hardware; autotuning is how libraries keep up, and how a search can be made cheap enough to run.",
+  "keyIdeas": [
+   "The knobs, and how fast the space grows",
+   "Why the winner changes when the shape changes",
+   "Prune before you measure: shared memory and registers",
+   "Search strategies and the trial budget",
+   "Measuring, caching and promoting without regressions"
+  ],
+  "examples": [],
+  "links": [
+   {
+    "label": "Triton: triton.autotune API reference",
+    "url": "https://triton-lang.org/main/python-api/generated/triton.autotune.html"
+   },
+   {
+    "label": "Triton: triton.Config API reference",
+    "url": "https://triton-lang.org/main/python-api/generated/triton.Config.html"
+   },
+   {
+    "label": "Triton source: python/triton/runtime/autotuner.py",
+    "url": "https://github.com/triton-lang/triton/blob/main/python/triton/runtime/autotuner.py"
+   }
+  ]
+ },
+ {
+  "id": "cpu-gpu-coscheduling",
+  "group": "GPU & accelerators",
+  "name": "CPU-GPU co-scheduling (streams, pinned memory, overlap)",
+  "summary": "Host work, transfers and kernels are overlapped using multiple CUDA streams, pinned host memory for async copies, events for ordering, and graph launch to cut per-launch overhead.",
+  "why": "In inference the GPU is often idle waiting for the host; overlapping the two is frequently a larger win than making the kernel faster.",
+  "keyIdeas": [
+   "The naive loop: four stages, one at a time",
+   "Pinned host memory: the precondition for overlap",
+   "Streams, the default stream trap, and events",
+   "A worked pipeline: four chunks, and the copy-bound crossover",
+   "CUDA Graphs: paying the launch cost once",
+   "In an inference server: double buffering and reading the gaps"
+  ],
+  "examples": [],
+  "links": [
+   {
+    "label": "CUDA Programming Guide: Asynchronous Execution (streams, events, default stream)",
+    "url": "https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/asynchronous-execution.html"
+   },
+   {
+    "label": "CUDA Programming Guide: Unified and System Memory (page-locked host memory)",
+    "url": "https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/understanding-memory.html"
+   },
+   {
+    "label": "CUDA Programming Guide: CUDA Graphs (capture, prohibited operations, update)",
+    "url": "https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/cuda-graphs.html"
+   }
+  ]
  }
 ]
