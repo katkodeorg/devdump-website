@@ -2433,5 +2433,335 @@
    }
   ],
   "year": "2011"
+ },
+ {
+  "id": "oss-reading-codebases",
+  "group": "Open source contribution",
+  "name": "Reading a large codebase (tracing a request, code search)",
+  "examples": [
+   "git grep",
+   "GitHub code search (symbol:, repo:)",
+   "git log -S / git log -L",
+   "git blame"
+  ],
+  "summary": "Finding your way around an unfamiliar repository: locating where a symbol is defined and used, following the code path for one feature, and using history to learn why code looks the way it does.",
+  "why": "You need to find the right place to change, and the history behind it, before a maintainer will trust a patch to code you did not write.",
+  "keyIdeas": [
+   "git grep searches tracked files in the work tree, the index or a given tree, so untracked build output is skipped",
+   "GitHub code search: symbol: finds definitions via Tree-sitter parsing (no build setup); repo: scopes the search",
+   "git log -S<string> finds commits that changed how often a string occurs; git log -L traces a line range or function",
+   "git blame annotates each line with the commit that last modified it, following whole-file renames"
+  ],
+  "links": [
+   {
+    "label": "GitHub code search syntax",
+    "url": "https://docs.github.com/en/search-github/github-code-search/understanding-github-code-search-syntax"
+   },
+   {
+    "label": "git log docs",
+    "url": "https://git-scm.com/docs/git-log"
+   },
+   {
+    "label": "git grep docs",
+    "url": "https://git-scm.com/docs/git-grep"
+   }
+  ]
+ },
+ {
+  "id": "oss-building-from-source",
+  "group": "Open source contribution",
+  "name": "Building large projects from source (editable installs, CMake, CUDA builds)",
+  "examples": [
+   "python -m pip install -e .",
+   "cmake -B build -S . ; cmake --build build",
+   "VLLM_USE_PRECOMPILED=1 uv pip install --editable .",
+   "ccache"
+  ],
+  "summary": "Getting a development build running locally: an editable Python install over a native core (PyTorch's editable install drives a CMake build), with options that skip or cache expensive C++ and CUDA compilation.",
+  "why": "You cannot test a change until you can build the project, and for projects with C++ or CUDA code a full build involves a lot of compilation.",
+  "keyIdeas": [
+   "An editable install adds the source tree to the import path: Python edits apply without reinstalling, native code still needs a rebuild",
+   "CMake splits configure (cmake -B build -S .) from build (cmake --build build); PyTorch's pip install -e . runs CMake in build/",
+   "Python-only shortcuts reuse prebuilt binaries (vLLM VLLM_USE_PRECOMPILED=1, PyTorch tools/nightly.py); not for C++ or kernel changes",
+   "ccache caches compilation results; vLLM's build uses it automatically when it is on PATH, so rebuilds are much faster"
+  ],
+  "links": [
+   {
+    "label": "pip: local project installs",
+    "url": "https://pip.pypa.io/en/stable/topics/local-project-installs/"
+   },
+   {
+    "label": "vLLM: build from source (GPU)",
+    "url": "https://docs.vllm.ai/en/latest/getting_started/installation/gpu.html"
+   },
+   {
+    "label": "PyTorch CONTRIBUTING",
+    "url": "https://github.com/pytorch/pytorch/blob/main/CONTRIBUTING.md"
+   }
+  ]
+ },
+ {
+  "id": "oss-git-pr-workflow",
+  "group": "Open source contribution",
+  "name": "Git workflow for pull requests (fork, branch, rebase, sign-off)",
+  "examples": [
+   "git remote add upstream <url>",
+   "git rebase -i --autosquash upstream/main",
+   "git commit -s",
+   "git push --force-with-lease"
+  ],
+  "summary": "The fork-based GitHub flow: fork the repo, add the original as an upstream remote, work on a branch, keep it current with upstream, push to your fork and open a pull request against the original.",
+  "why": "Maintainers expect a clean branch on top of current upstream, with commits that follow the project's rules, such as a Signed-off-by line.",
+  "keyIdeas": [
+   "Add the original repo as a remote named upstream, then git fetch upstream to bring in its new commits",
+   "git commit --fixup=<commit> plus git rebase -i --autosquash folds review fixes into the commits they amend",
+   "After a rebase, git push --force-with-lease only overwrites the remote branch if it still matches your remote-tracking ref",
+   "git commit -s adds a Signed-off-by trailer; what it certifies depends on the project (often the DCO)"
+  ],
+  "links": [
+   {
+    "label": "GitHub Docs: Fork a repository",
+    "url": "https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo"
+   },
+   {
+    "label": "git rebase docs",
+    "url": "https://git-scm.com/docs/git-rebase"
+   },
+   {
+    "label": "git push docs",
+    "url": "https://git-scm.com/docs/git-push"
+   }
+  ]
+ },
+ {
+  "id": "oss-contribution-norms",
+  "group": "Open source contribution",
+  "name": "Contribution norms (CONTRIBUTING, issues, codes of conduct, AI-assisted contribution policies)",
+  "examples": [
+   "CONTRIBUTING.md",
+   "CODE_OF_CONDUCT.md",
+   "issue templates and forms",
+   "Assisted-by: commit trailer (LLVM)"
+  ],
+  "summary": "A project's written rules for contributors: its CONTRIBUTING guide, code of conduct, issue process and, increasingly, a policy on AI tools, which ranges from labelled use (LLVM) to declining AI-generated content (QEMU).",
+  "why": "Reading these rules before you start is the cheapest way to avoid a contribution that is rejected or ignored.",
+  "keyIdeas": [
+   "Check CONTRIBUTING (in the root, docs/ or .github/) before opening an issue or PR; GitHub links to it when you open either",
+   "Open an issue before substantial work, and comment on an issue you take on so others do not duplicate it",
+   "LLVM allows AI tools with a human in the loop: review all output, label substantial use (Assisted-by:), never on good first issues",
+   "QEMU declines contributions known or suspected to include AI-generated content, citing DCO and licensing uncertainty"
+  ],
+  "links": [
+   {
+    "label": "Open Source Guides: How to contribute",
+    "url": "https://opensource.guide/how-to-contribute/"
+   },
+   {
+    "label": "LLVM AI Tool Use Policy",
+    "url": "https://llvm.org/docs/AIToolPolicy.html"
+   },
+   {
+    "label": "QEMU: Code provenance (AI content)",
+    "url": "https://www.qemu.org/docs/master/devel/code-provenance.html"
+   }
+  ]
+ },
+ {
+  "id": "oss-licenses-cla-dco",
+  "group": "Open source contribution",
+  "name": "Open source licenses, CLAs and the DCO",
+  "examples": [
+   "MIT, Apache-2.0 (permissive)",
+   "GPLv3, AGPLv3 (copyleft)",
+   "Signed-off-by: (DCO 1.1)",
+   "Apache ICLA, Google CLA"
+  ],
+  "summary": "Licenses set terms for using and redistributing code: permissive ones mainly require keeping notices, copyleft ones require sharing source under the same license on distribution. A CLA grants rights; the DCO certifies you may submit.",
+  "why": "Some projects (Google's) will not accept a contribution without a signed CLA; others (QEMU, Linux) require a DCO sign-off on every commit.",
+  "keyIdeas": [
+   "Permissive (MIT, Apache 2.0): keep copyright and license notices; larger works may use other terms and ship without source",
+   "Apache 2.0 and GPLv3 include an express patent grant from contributors; choosealicense lists no such grant for MIT",
+   "Copyleft (GPLv3): distributed larger works using the code must make source available under the same license; AGPLv3 counts network use too",
+   "CLA: a signed agreement granting rights while you keep ownership; DCO: a per-commit certification added with git commit -s"
+  ],
+  "links": [
+   {
+    "label": "choosealicense.com: Licenses",
+    "url": "https://choosealicense.com/licenses/"
+   },
+   {
+    "label": "Developer Certificate of Origin",
+    "url": "https://developercertificate.org/"
+   },
+   {
+    "label": "ASF Contributor Agreements",
+    "url": "https://www.apache.org/licenses/contributor-agreements.html"
+   }
+  ]
+ },
+ {
+  "id": "oss-ci-and-tests",
+  "group": "Open source contribution",
+  "name": "CI pipelines and test suites (running subsets, flaky tests)",
+  "examples": [
+   "pytest tests/test_mod.py::test_func",
+   "pytest -k Loss",
+   "pytest --lf",
+   ".github/workflows/*.yml"
+  ],
+  "summary": "CI runs a project's test suites automatically on pull requests. Contributors run the relevant subset locally first and learn to tell real failures from flaky tests.",
+  "why": "Where CI checks are required, a failing run blocks merging, and reviewers expect you to have run the builds and tests relevant to your change first.",
+  "keyIdeas": [
+   "GitHub Actions workflows are YAML files in the repo, run when an event such as opening a pull request triggers them",
+   "Select tests by node id (file.py::Class::test) or keyword (-k); --lf reruns only last failures, --ff runs them first",
+   "Flaky tests usually rely on uncontrolled state: test order, data left by other tests, threads or overly strict timing",
+   "Mitigations: rerun plugins (pytest-rerunfailures), random-order plugins to expose state bugs, or rewriting the test"
+  ],
+  "links": [
+   {
+    "label": "pytest: How to invoke pytest",
+    "url": "https://docs.pytest.org/en/stable/how-to/usage.html"
+   },
+   {
+    "label": "pytest: Flaky tests",
+    "url": "https://docs.pytest.org/en/stable/explanation/flaky.html"
+   },
+   {
+    "label": "Understanding GitHub Actions",
+    "url": "https://docs.github.com/en/actions/about-github-actions/understanding-github-actions"
+   }
+  ]
+ },
+ {
+  "id": "oss-writing-prs",
+  "group": "Open source contribution",
+  "name": "Writing a reviewable pull request",
+  "examples": [
+   "Closes #123 in the description",
+   "draft pull requests",
+   "one logical change per PR",
+   "self-review of the diff"
+  ],
+  "summary": "Shaping a change so a maintainer can review it quickly: small and focused, with a title and description that explain the problem, the approach and where to look, and a diff you have reviewed yourself.",
+  "why": "Small, well-explained changes are reviewed faster and more thoroughly; reviewers may send an oversized change back to be split.",
+  "keyIdeas": [
+   "One logical change per patch (a bug fix and a speedup go separately); each patch in a series must build and run",
+   "Explain why, what changed and where reviewers should focus; keep the description self-contained across versions",
+   "A keyword like Closes #10 links an issue and closes it on merge, but only when the PR targets the default branch",
+   "Open a draft to share work in progress: drafts cannot be merged and do not automatically request code owners"
+  ],
+  "links": [
+   {
+    "label": "GitHub: Helping others review your changes",
+    "url": "https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/getting-started/helping-others-review-your-changes"
+   },
+   {
+    "label": "Linux kernel: Submitting patches",
+    "url": "https://docs.kernel.org/process/submitting-patches.html"
+   },
+   {
+    "label": "Google: Small CLs",
+    "url": "https://google.github.io/eng-practices/review/developer/small-cls.html"
+   }
+  ]
+ },
+ {
+  "id": "oss-code-review",
+  "group": "Open source contribution",
+  "name": "Code review: responding to and giving review",
+  "examples": [
+   "GitHub suggestion blocks",
+   "Approve or Request changes",
+   "Nit: prefix",
+   "Reviewed-by: and Tested-by: tags"
+  ],
+  "summary": "The back-and-forth on a change: authors answer every comment and push fixes; reviewers judge whether the change improves the codebase and make clear which comments are optional.",
+  "why": "Review decides whether a change lands, and the kernel docs warn that ignoring reviewers is a good way to get ignored in return.",
+  "keyIdeas": [
+   "Respond to every comment, say what you changed and thank reviewers; list the differences when sending a new version",
+   "If a reviewer did not understand something, clarify the code or add a comment instead of only explaining in the thread",
+   "Google's standard: approve once a change definitely improves overall code health, even if it is not perfect",
+   "Prefix optional polish with Nit:; on GitHub, a suggestion block proposes an exact replacement for the selected lines"
+  ],
+  "links": [
+   {
+    "label": "Google: The standard of code review",
+    "url": "https://google.github.io/eng-practices/review/reviewer/standard.html"
+   },
+   {
+    "label": "Google: Handling reviewer comments",
+    "url": "https://google.github.io/eng-practices/review/developer/handling-comments.html"
+   },
+   {
+    "label": "GitHub: Reviewing proposed changes",
+    "url": "https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/reviewing-proposed-changes-in-a-pull-request"
+   }
+  ]
+ },
+ {
+  "id": "oss-performance-prs",
+  "group": "Open source contribution",
+  "name": "Performance PRs: benchmark evidence and regression checks",
+  "examples": [
+   "pyperf compare_to ref.json changed.json",
+   "python -m pyperf system tune",
+   "hyperfine --warmup 3 '<cmd>'",
+   "Google Benchmark compare.py"
+  ],
+  "summary": "A performance change needs evidence: before and after measurements on the same setup, repeated enough to separate a real difference from noise, plus an honest note on what the change costs.",
+  "why": "The kernel docs ask for numbers behind any claimed gain in speed, memory or binary size, and the same numbers let reviewers check for regressions.",
+  "keyIdeas": [
+   "Quantify claims and describe non-obvious costs: optimizations trade off CPU, memory and readability (kernel docs)",
+   "Reduce noise: warmup runs, CPU isolation and pinning, and pyperf system tune to cut system jitter",
+   "Test significance: pyperf compare_to uses a two-sample t-test; Google Benchmark's compare.py uses a Mann-Whitney U test",
+   "pyperf warns when results look unstable (e.g. std dev large relative to the mean) and suggests more runs or loops"
+  ],
+  "links": [
+   {
+    "label": "pyperf: Tune the system",
+    "url": "https://pyperf.readthedocs.io/en/latest/system.html"
+   },
+   {
+    "label": "pyperf commands (compare_to)",
+    "url": "https://pyperf.readthedocs.io/en/latest/cli.html"
+   },
+   {
+    "label": "Google Benchmark tools (compare.py)",
+    "url": "https://github.com/google/benchmark/blob/main/docs/tools.md"
+   }
+  ]
+ },
+ {
+  "id": "oss-reproducing-bugs",
+  "group": "Open source contribution",
+  "name": "Reproducing bugs and minimal reproducible examples",
+  "examples": [
+   "minimal reproducible example (MRE)",
+   "git bisect run ./test.sh",
+   "python collect_env.py (PyTorch bug template)",
+   "llvm-reduce"
+  ],
+  "summary": "Turning a bug into something a maintainer can run: the smallest complete program that still shows the problem, the exact environment, and ideally the commit that introduced it.",
+  "why": "Bug templates such as PyTorch's ask for a succinct runnable snippet and environment details so maintainers can reproduce and fix the issue.",
+  "keyIdeas": [
+   "MRE: minimal (least code that still fails), complete (everything needed, as text), reproducible (tested to show the bug)",
+   "Trim by divide and conquer: remove code until the problem disappears, then add the last piece back",
+   "git bisect binary-searches history for the bad commit; bisect run automates it (exit 0 good, 125 skip, other 1 to 127 bad)",
+   "Search existing issues first and check whether the bug still reproduces on the latest nightly (PyTorch template)"
+  ],
+  "links": [
+   {
+    "label": "Stack Overflow: Minimal reproducible example",
+    "url": "https://stackoverflow.com/help/minimal-reproducible-example"
+   },
+   {
+    "label": "git bisect docs",
+    "url": "https://git-scm.com/docs/git-bisect"
+   },
+   {
+    "label": "PyTorch bug report template",
+    "url": "https://github.com/pytorch/pytorch/blob/main/.github/ISSUE_TEMPLATE/bug-report.yml"
+   }
+  ]
  }
 ]
