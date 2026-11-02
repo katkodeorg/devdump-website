@@ -1,0 +1,1 @@
+import{a1 as c,r}from"./index-CPY72-hT.js";function f(o="q"){const{search:e}=c(),t=()=>new URLSearchParams(e).get(o),[u,s]=r.useState(()=>t()||"");return r.useEffect(()=>{const a=t();a!=null&&s(a)},[e]),[u,s]}export{f as u};
